@@ -2,12 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import jwt, { JwtPayload } from "jsonwebtoken";
 
-const AUTH_ROUTES = ["/login", "/register"];
-const PUBLIC_ROUTES = ["/"];
+const REDIRECT_IF_AUTHENTICATED_ROUTES = ["/", "/login", "/register"];
 
 export async function proxy(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
-
     const accessToken = request.cookies.get("accessToken")?.value;
 
     let userRole: string | null = null;
@@ -23,13 +21,12 @@ export async function proxy(request: NextRequest) {
         }
     }
 
-    const isAuthRoute = AUTH_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
-    const isPublicRoute = PUBLIC_ROUTES.some(
-        (route) => pathname === route || (route !== "/" && pathname.startsWith(route + "/"))
+    const isRedirectIfAuthRoute = REDIRECT_IF_AUTHENTICATED_ROUTES.some(
+        (route) => pathname === route
     );
 
-    // 1. User is logged in and trying to access login or register page -> redirect to dashboard
-    if (accessToken && isAuthRoute) {
+    // 1. User has token and accesses /, /login, or /register -> Auto redirect to their role dashboard
+    if (accessToken && isRedirectIfAuthRoute) {
         if (userRole === "CUSTOMER") {
             return NextResponse.redirect(new URL("/dashboard", request.url));
         } else if (userRole === "TECHNICIAN") {
@@ -41,14 +38,18 @@ export async function proxy(request: NextRequest) {
         }
     }
 
-    // 2. Protected routes: User is NOT logged in and trying to access private page -> redirect to /login
-    if (!accessToken && !isPublicRoute && !isAuthRoute) {
+    // 2. Protected dashboard routes: unauthenticated users redirect to login
+    const isProtectedRoute = pathname.startsWith("/dashboard") || 
+                             pathname.startsWith("/admin-dashboard") || 
+                             pathname.startsWith("/technician-dashboard");
+
+    if (!accessToken && isProtectedRoute) {
         const loginUrl = new URL("/login", request.url);
         loginUrl.searchParams.set("redirectTo", pathname);
         return NextResponse.redirect(loginUrl);
     }
 
-    // 3. Authorization: Role-based access control
+    // 3. Role-based access control for protected routes
     if (accessToken && userRole) {
         if (pathname.startsWith("/dashboard") && userRole !== "CUSTOMER") {
             if (userRole === "TECHNICIAN") {

@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, Clock, Wrench, UserCheck, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
-import { getPublicServicesAction, getPublicCategoriesAction, Service, Category } from "../_actions/publicAction";
+import { getPublicServicesAction, getPublicCategoriesAction, Service, Category, MetaData } from "../_actions/publicAction";
 
 const CORAL = "#FF5A36";
 const TEAL = "#0FA894";
@@ -17,6 +17,7 @@ function ServicesContent() {
 
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [meta, setMeta] = useState<MetaData>({ page: 1, limit: 6, total: 0, totalPage: 1 });
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategoryIdParam);
   const [searchTerm, setSearchTerm] = useState<string>(initialSearchParam);
   const [loading, setLoading] = useState(true);
@@ -28,7 +29,7 @@ function ServicesContent() {
   // Load categories on mount
   useEffect(() => {
     const loadCategories = async () => {
-      const res = await getPublicCategoriesAction();
+      const res = await getPublicCategoriesAction({ limit: 100 });
       if (res && res.success && Array.isArray(res.data)) {
         setCategories(res.data);
         if (initialCategoryParam && !initialCategoryIdParam) {
@@ -42,17 +43,20 @@ function ServicesContent() {
     loadCategories();
   }, [initialCategoryParam, initialCategoryIdParam]);
 
-  // Fetch services when selectedCategory or searchTerm changes
+  // Fetch services when page, selectedCategory or searchTerm changes
   useEffect(() => {
     const fetchServices = async () => {
       setLoading(true);
       const res = await getPublicServicesAction({
+        page: currentPage,
+        limit: pageSize,
         searchTerm: searchTerm.trim() || undefined,
         categoryId: selectedCategory || undefined,
       });
 
-      if (res && res.success && Array.isArray(res.data)) {
-        setServices(res.data);
+      if (res && res.success) {
+        setServices(res.data || []);
+        if (res.meta) setMeta(res.meta);
       } else {
         setServices([]);
       }
@@ -60,13 +64,7 @@ function ServicesContent() {
     };
 
     fetchServices();
-  }, [selectedCategory, searchTerm]);
-
-  const totalPages = Math.ceil(services.length / pageSize) || 1;
-  const paginatedServices = services.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  }, [currentPage, selectedCategory, searchTerm]);
 
   const handleCategorySelect = (catId: string) => {
     setSelectedCategory(catId);
@@ -161,9 +159,9 @@ function ServicesContent() {
         <div className="mt-4 flex items-center justify-between border-b border-neutral-200 pb-3">
           <p className="text-xs font-medium text-neutral-500">
             Showing <span className="font-bold text-neutral-800">
-              {services.length > 0 ? (currentPage - 1) * pageSize + 1 : 0} -{" "}
-              {Math.min(currentPage * pageSize, services.length)}
-            </span> of <span className="font-bold text-neutral-800">{services.length}</span> available services
+              {meta.total > 0 ? (meta.page - 1) * meta.limit + 1 : 0} -{" "}
+              {Math.min(meta.page * meta.limit, meta.total)}
+            </span> of <span className="font-bold text-neutral-800">{meta.total}</span> available services
           </p>
           {(selectedCategory || searchTerm) && (
             <button
@@ -197,7 +195,7 @@ function ServicesContent() {
         ) : (
           <>
             <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {paginatedServices.map((service) => (
+              {services.map((service) => (
                 <div
                   key={service.id}
                   className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E7E2D8] bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[#FF5A36]/40 hover:shadow-lg"
@@ -253,12 +251,12 @@ function ServicesContent() {
               ))}
             </div>
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
+            {/* Server-Side Pagination Controls */}
+            {meta.totalPage > 1 && (
               <div className="mt-12 flex items-center justify-between border-t border-neutral-200 pt-6">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage <= 1 || loading}
                   className="flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition-all hover:bg-neutral-50 disabled:opacity-40 disabled:hover:bg-white"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -266,7 +264,7 @@ function ServicesContent() {
                 </button>
 
                 <div className="flex items-center gap-1.5">
-                  {Array.from({ length: totalPages }).map((_, idx) => {
+                  {Array.from({ length: meta.totalPage }).map((_, idx) => {
                     const pageNum = idx + 1;
                     return (
                       <button
@@ -285,8 +283,8 @@ function ServicesContent() {
                 </div>
 
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, meta.totalPage))}
+                  disabled={currentPage >= meta.totalPage || loading}
                   className="flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition-all hover:bg-neutral-50 disabled:opacity-40 disabled:hover:bg-white"
                 >
                   Next

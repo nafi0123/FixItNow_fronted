@@ -1,5 +1,12 @@
 "use server"
 
+export interface MetaData {
+    page: number;
+    limit: number;
+    total: number;
+    totalPage: number;
+}
+
 export interface Category {
     id: string;
     name: string;
@@ -60,9 +67,14 @@ export interface TechnicianProfile {
 
 const getBackendUrl = () => process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
-export const getPublicCategoriesAction = async () => {
+export const getPublicCategoriesAction = async (params?: { page?: number; limit?: number; searchTerm?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.searchTerm) query.append("searchTerm", params.searchTerm);
+
     try {
-        const res = await fetch(`${getBackendUrl()}/api/categories`, {
+        const res = await fetch(`${getBackendUrl()}/api/categories?${query.toString()}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             next: { revalidate: 60, tags: ["public-categories"] }
@@ -74,8 +86,10 @@ export const getPublicCategoriesAction = async () => {
     }
 };
 
-export const getPublicServicesAction = async (params?: { searchTerm?: string; categoryId?: string }) => {
+export const getPublicServicesAction = async (params?: { page?: number; limit?: number; searchTerm?: string; categoryId?: string }) => {
     const query = new URLSearchParams();
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
     if (params?.searchTerm) query.append("searchTerm", params.searchTerm);
     if (params?.categoryId) query.append("categoryId", params.categoryId);
 
@@ -92,8 +106,10 @@ export const getPublicServicesAction = async (params?: { searchTerm?: string; ca
     }
 };
 
-export const getPublicTechniciansAction = async (params?: { searchTerm?: string; location?: string; rating?: string; skills?: string }) => {
+export const getPublicTechniciansAction = async (params?: { page?: number; limit?: number; searchTerm?: string; location?: string; rating?: string; skills?: string }) => {
     const query = new URLSearchParams();
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
     if (params?.searchTerm) query.append("searchTerm", params.searchTerm);
     if (params?.location) query.append("location", params.location);
     if (params?.rating) query.append("rating", params.rating);

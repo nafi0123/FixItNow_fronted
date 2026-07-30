@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, Star, MapPin, ArrowRight, User, ShieldCheck, ChevronLeft, ChevronRight, Wrench } from "lucide-react";
-import { getPublicTechniciansAction, getPublicCategoriesAction, TechnicianProfile, Category } from "../_actions/publicAction";
+import { getPublicTechniciansAction, getPublicCategoriesAction, TechnicianProfile, Category, MetaData } from "../_actions/publicAction";
 
 const CORAL = "#FF5A36";
 const TEAL = "#0FA894";
@@ -15,6 +15,7 @@ function TechniciansContent() {
 
   const [technicians, setTechnicians] = useState<TechnicianProfile[]>([]);
   const [categoriesMap, setCategoriesMap] = useState<Record<string, string>>({});
+  const [meta, setMeta] = useState<MetaData>({ page: 1, limit: 6, total: 0, totalPage: 1 });
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [location, setLocation] = useState("");
   const [minRating, setMinRating] = useState("");
@@ -26,7 +27,7 @@ function TechniciansContent() {
 
   useEffect(() => {
     const loadCategoriesMap = async () => {
-      const catRes = await getPublicCategoriesAction();
+      const catRes = await getPublicCategoriesAction({ limit: 100 });
       if (catRes && catRes.success && Array.isArray(catRes.data)) {
         const map: Record<string, string> = {};
         catRes.data.forEach((c: Category) => {
@@ -42,13 +43,16 @@ function TechniciansContent() {
     const fetchTechnicians = async () => {
       setLoading(true);
       const res = await getPublicTechniciansAction({
+        page: currentPage,
+        limit: pageSize,
         searchTerm: searchTerm.trim() || undefined,
         location: location.trim() || undefined,
         rating: minRating || undefined,
       });
 
-      if (res && res.success && Array.isArray(res.data)) {
-        setTechnicians(res.data);
+      if (res && res.success) {
+        setTechnicians(res.data || []);
+        if (res.meta) setMeta(res.meta);
       } else {
         setTechnicians([]);
       }
@@ -56,13 +60,7 @@ function TechniciansContent() {
     };
 
     fetchTechnicians();
-  }, [searchTerm, location, minRating]);
-
-  const totalPages = Math.ceil(technicians.length / pageSize) || 1;
-  const paginatedTechnicians = technicians.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  }, [currentPage, searchTerm, location, minRating]);
 
   const getCleanSkillName = (skill: string) => {
     if (categoriesMap[skill]) return categoriesMap[skill];
@@ -167,8 +165,8 @@ function TechniciansContent() {
           </div>
 
           <span className="text-xs font-semibold text-neutral-500">
-            Showing {technicians.length > 0 ? (currentPage - 1) * pageSize + 1 : 0} -{" "}
-            {Math.min(currentPage * pageSize, technicians.length)} of {technicians.length} technician{technicians.length === 1 ? "" : "s"}
+            Showing {meta.total > 0 ? (meta.page - 1) * meta.limit + 1 : 0} -{" "}
+            {Math.min(meta.page * meta.limit, meta.total)} of {meta.total} technician{meta.total === 1 ? "" : "s"}
           </span>
         </div>
 
@@ -188,7 +186,7 @@ function TechniciansContent() {
         ) : (
           <>
             <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {paginatedTechnicians.map((tech) => (
+              {technicians.map((tech) => (
                 <div
                   key={tech.id}
                   className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E7E2D8] bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[#FF5A36]/40 hover:shadow-lg"
@@ -212,7 +210,7 @@ function TechniciansContent() {
 
                       <div className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">
                         <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        {tech.rating ? Number(tech.rating).toFixed(1) : "5.0"}
+                        {tech.rating && Number(tech.rating) > 0 ? Number(tech.rating).toFixed(1) : "New"}
                       </div>
                     </div>
 
@@ -262,12 +260,12 @@ function TechniciansContent() {
               ))}
             </div>
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
+            {/* Server-Side Pagination Controls */}
+            {meta.totalPage > 1 && (
               <div className="mt-12 flex items-center justify-between border-t border-neutral-200 pt-6">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage <= 1 || loading}
                   className="flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition-all hover:bg-neutral-50 disabled:opacity-40 disabled:hover:bg-white"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -275,7 +273,7 @@ function TechniciansContent() {
                 </button>
 
                 <div className="flex items-center gap-1.5">
-                  {Array.from({ length: totalPages }).map((_, idx) => {
+                  {Array.from({ length: meta.totalPage }).map((_, idx) => {
                     const pageNum = idx + 1;
                     return (
                       <button
@@ -294,8 +292,8 @@ function TechniciansContent() {
                 </div>
 
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, meta.totalPage))}
+                  disabled={currentPage >= meta.totalPage || loading}
                   className="flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition-all hover:bg-neutral-50 disabled:opacity-40 disabled:hover:bg-white"
                 >
                   Next
