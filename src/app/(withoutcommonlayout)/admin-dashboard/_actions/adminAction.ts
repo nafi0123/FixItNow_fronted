@@ -1,6 +1,7 @@
 "use server"
 
 import jwt, { JwtPayload } from "jsonwebtoken"
+import { revalidateTag } from "next/cache"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
@@ -25,7 +26,10 @@ export const getAllUsersAdminAction = async (params?: { page?: number; limit?: n
                 "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json"
             },
-            cache: "no-store"
+            next: {
+                revalidate: 60 * 60,
+                tags: ["admin-users"]
+            }
         });
 
         const result = await res.json();
@@ -55,6 +59,9 @@ export const updateUserStatusAction = async (userId: string, isBanned: boolean) 
         });
 
         const result = await res.json();
+        if (result && result.success) {
+            revalidateTag("admin-users", { expire: 0 });
+        }
         return result;
     } catch (error) {
         console.error("updateUserStatusAction error:", error);
@@ -82,7 +89,10 @@ export const getAllCategoriesAdminAction = async (params?: { page?: number; limi
                 "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json"
             },
-            cache: "no-store"
+            next: {
+                revalidate: 60 * 60,
+                tags: ["admin-categories"]
+            }
         });
 
         const result = await res.json();
@@ -112,6 +122,9 @@ export const createCategoryAdminAction = async (payload: { name: string; descrip
         });
 
         const result = await res.json();
+        if (result && result.success) {
+            revalidateTag("admin-categories", { expire: 0 });
+        }
         return result;
     } catch (error) {
         console.error("createCategoryAdminAction error:", error);

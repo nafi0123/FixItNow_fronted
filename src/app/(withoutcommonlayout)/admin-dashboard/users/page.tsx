@@ -293,7 +293,7 @@ export default function AdminUsersPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-[#6B707E]">
+                    <td suppressHydrationWarning className="px-6 py-4 text-[#6B707E]">
                       {new Date(user.createdAt).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "short",

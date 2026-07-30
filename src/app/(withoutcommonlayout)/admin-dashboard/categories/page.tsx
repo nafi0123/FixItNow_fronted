@@ -234,7 +234,7 @@ export default function AdminCategoriesPage() {
                     <td className="px-6 py-4 text-[#4A4E58]">
                       {category.description || <span className="italic text-[#9AA0AA]">No description</span>}
                     </td>
-                    <td className="px-6 py-4 text-[#6B707E]">
+                    <td suppressHydrationWarning className="px-6 py-4 text-[#6B707E]">
                       {new Date(category.createdAt).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "short",

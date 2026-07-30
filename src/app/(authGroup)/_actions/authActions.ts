@@ -1,6 +1,7 @@
 "use server"
 
 import jwt, { JwtPayload } from "jsonwebtoken"
+import { revalidateTag } from "next/cache"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
@@ -166,7 +167,10 @@ export const getMeAction = async () => {
                 "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json"
             },
-            cache: "no-store"
+            next: {
+                revalidate: 60 * 60,
+                tags: ["user-me"]
+            }
         });
 
         const result = await res.json();
