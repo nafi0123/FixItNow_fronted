@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import jwt, { JwtPayload } from "jsonwebtoken";
 
-const REDIRECT_IF_AUTHENTICATED_ROUTES = ["/", "/login", "/register"];
+const AUTH_ROUTES = ["/login", "/register"];
 
 export async function proxy(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
@@ -21,12 +21,12 @@ export async function proxy(request: NextRequest) {
         }
     }
 
-    const isRedirectIfAuthRoute = REDIRECT_IF_AUTHENTICATED_ROUTES.some(
-        (route) => pathname === route
+    const isAuthRoute = AUTH_ROUTES.some(
+        (route) => pathname === route || pathname.startsWith(route + "/")
     );
 
-    // 1. User has token and accesses /, /login, or /register -> Auto redirect to their role dashboard
-    if (accessToken && isRedirectIfAuthRoute) {
+    // 1. Logged in user accessing /login or /register -> Auto redirect to role dashboard
+    if (accessToken && isAuthRoute) {
         if (userRole === "CUSTOMER") {
             return NextResponse.redirect(new URL("/dashboard", request.url));
         } else if (userRole === "TECHNICIAN") {

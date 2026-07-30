@@ -3,7 +3,6 @@
 import jwt, { JwtPayload } from "jsonwebtoken"
 import { revalidateTag } from "next/cache"
 import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
 
 export const getAllUsersAdminAction = async (params?: { page?: number; limit?: number; search?: string; role?: string }) => {
     const cookieStore = await cookies();
@@ -60,7 +59,7 @@ export const updateUserStatusAction = async (userId: string, isBanned: boolean) 
 
         const result = await res.json();
         if (result && result.success) {
-            revalidateTag("admin-users", { expire: 0 });
+            try { (revalidateTag as any)("admin-users"); } catch {}
         }
         return result;
     } catch (error) {
@@ -123,11 +122,71 @@ export const createCategoryAdminAction = async (payload: { name: string; descrip
 
         const result = await res.json();
         if (result && result.success) {
-            revalidateTag("admin-categories", { expire: 0 });
+            try { (revalidateTag as any)("admin-categories"); } catch {}
+            try { (revalidateTag as any)("public-categories"); } catch {}
         }
         return result;
     } catch (error) {
         console.error("createCategoryAdminAction error:", error);
+        return { success: false, message: "Server connection failed" };
+    }
+}
+
+export const updateCategoryAdminAction = async (categoryId: string, payload: { name: string; description?: string }) => {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("accessToken")?.value;
+
+    if (!token) return { success: false, message: "Unauthorized" };
+
+    const backendUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
+    try {
+        const res = await fetch(`${backendUrl}/api/admin/categories/${categoryId}`, {
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        if (result && result.success) {
+            try { (revalidateTag as any)("admin-categories"); } catch {}
+            try { (revalidateTag as any)("public-categories"); } catch {}
+        }
+        return result;
+    } catch (error) {
+        console.error("updateCategoryAdminAction error:", error);
+        return { success: false, message: "Server connection failed" };
+    }
+}
+
+export const deleteCategoryAdminAction = async (categoryId: string) => {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("accessToken")?.value;
+
+    if (!token) return { success: false, message: "Unauthorized" };
+
+    const backendUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
+    try {
+        const res = await fetch(`${backendUrl}/api/admin/categories/${categoryId}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            }
+        });
+
+        const result = await res.json();
+        if (result && result.success) {
+            try { (revalidateTag as any)("admin-categories"); } catch {}
+            try { (revalidateTag as any)("public-categories"); } catch {}
+        }
+        return result;
+    } catch (error) {
+        console.error("deleteCategoryAdminAction error:", error);
         return { success: false, message: "Server connection failed" };
     }
 }

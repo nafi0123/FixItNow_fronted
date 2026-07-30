@@ -1,9 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Search, FolderPlus, Tag, SearchX, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Search, FolderPlus, Tag, SearchX, X, ChevronLeft, ChevronRight, Eye, Pencil, Trash2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
-import { getAllCategoriesAdminAction, createCategoryAdminAction } from "../_actions/adminAction"
+import {
+  getAllCategoriesAdminAction,
+  createCategoryAdminAction,
+  updateCategoryAdminAction,
+  deleteCategoryAdminAction,
+} from "../_actions/adminAction"
 
 interface CategoryItem {
   id: string
@@ -20,10 +25,8 @@ interface MetaData {
   totalPage: number
 }
 
-const INK = "#14171C"
 const CORAL = "#FF5A36"
 const CORAL_DARK = "#C23B1F"
-const TEAL = "#0FA894"
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([])
@@ -35,8 +38,14 @@ export default function AdminCategoriesPage() {
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
 
-  // Create Modal / Form state
+  // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null)
+  const [viewingCategory, setViewingCategory] = useState<CategoryItem | null>(null)
+  const [deletingCategory, setDeletingCategory] = useState<CategoryItem | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Form state
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -73,7 +82,21 @@ export default function AdminCategoriesPage() {
     fetchCategories()
   }, [page, limit, debouncedSearch])
 
-  const handleCreateCategory = async (e: React.FormEvent) => {
+  const handleOpenCreateModal = () => {
+    setEditingCategory(null)
+    setName("")
+    setDescription("")
+    setIsModalOpen(true)
+  }
+
+  const handleOpenEditModal = (category: CategoryItem) => {
+    setEditingCategory(category)
+    setName(category.name)
+    setDescription(category.description || "")
+    setIsModalOpen(true)
+  }
+
+  const handleSubmitCategory = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) {
       toast.error("Category name is required")
@@ -81,21 +104,55 @@ export default function AdminCategoriesPage() {
     }
 
     setIsSubmitting(true)
-    const result = await createCategoryAdminAction({
-      name: name.trim(),
-      description: description.trim() || undefined,
-    })
 
+    if (editingCategory) {
+      // Update Category
+      const result = await updateCategoryAdminAction(editingCategory.id, {
+        name: name.trim(),
+        description: description.trim() || undefined,
+      })
+
+      if (result && result.success) {
+        toast.success(result.message || "Category updated successfully!")
+        setIsModalOpen(false)
+        setEditingCategory(null)
+        fetchCategories()
+      } else {
+        toast.error(result?.message || "Failed to update category")
+      }
+    } else {
+      // Create Category
+      const result = await createCategoryAdminAction({
+        name: name.trim(),
+        description: description.trim() || undefined,
+      })
+
+      if (result && result.success) {
+        toast.success(result.message || "Category created successfully!")
+        setName("")
+        setDescription("")
+        setIsModalOpen(false)
+        fetchCategories()
+      } else {
+        toast.error(result?.message || "Failed to create category")
+      }
+    }
+
+    setIsSubmitting(false)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingCategory) return
+    setIsDeleting(true)
+    const result = await deleteCategoryAdminAction(deletingCategory.id)
     if (result && result.success) {
-      toast.success(result.message || "Category created successfully!")
-      setName("")
-      setDescription("")
-      setIsModalOpen(false)
+      toast.success(result.message || "Category deleted successfully!")
+      setDeletingCategory(null)
       fetchCategories()
     } else {
-      toast.error(result?.message || "Failed to create category")
+      toast.error(result?.message || "Failed to delete category")
     }
-    setIsSubmitting(false)
+    setIsDeleting(false)
   }
 
   return (
@@ -112,13 +169,13 @@ export default function AdminCategoriesPage() {
           <div>
             <h1 className="text-2xl font-extrabold text-[#1E2026]">Categories management</h1>
             <p className="text-xs text-[#6B707E]">
-              Create and manage service categories for technician bookings.
+              Create, view, update, and manage service categories for technician bookings.
             </p>
           </div>
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenCreateModal}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF5A36] to-[#C23B1F] px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-[#FF5A36]/20 transition-all hover:opacity-95"
         >
           <Plus className="h-4 w-4" />
@@ -177,6 +234,7 @@ export default function AdminCategoriesPage() {
                 <th className="px-6 py-4">Slug</th>
                 <th className="px-6 py-4">Description</th>
                 <th className="px-6 py-4">Created Date</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E2D8]">
@@ -198,11 +256,14 @@ export default function AdminCategoriesPage() {
                     <td className="px-6 py-4">
                       <div className="h-3.5 w-20 rounded bg-[#F1EEE6]" />
                     </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="h-7 w-20 ml-auto rounded bg-[#F1EEE6]" />
+                    </td>
                   </tr>
                 ))
               ) : categories.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-16 text-center">
+                  <td colSpan={5} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBF3] text-[#9AA0AA]">
                         <SearchX className="h-5 w-5" />
@@ -240,6 +301,36 @@ export default function AdminCategoriesPage() {
                         month: "short",
                         day: "numeric",
                       })}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* View Button */}
+                        <button
+                          onClick={() => setViewingCategory(category)}
+                          title="View Details"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E7E2D8] bg-white text-[#6B707E] transition-colors hover:border-[#0FA894] hover:bg-teal-50 hover:text-[#0FA894]"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => handleOpenEditModal(category)}
+                          title="Edit Category"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E7E2D8] bg-white text-[#6B707E] transition-colors hover:border-[#FF5A36] hover:bg-orange-50 hover:text-[#FF5A36]"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => setDeletingCategory(category)}
+                          title="Delete Category"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E7E2D8] bg-white text-[#6B707E] transition-colors hover:border-rose-400 hover:bg-rose-50 hover:text-rose-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -286,21 +377,82 @@ export default function AdminCategoriesPage() {
         </div>
       </div>
 
-      {/* Create Category Modal */}
-      {isModalOpen && (
+      {/* View Category Details Modal */}
+      {viewingCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-[#E7E2D8] bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between border-b border-[#E7E2D8] pb-4">
-              <h2 className="text-lg font-extrabold text-[#1E2026]">Add new category</h2>
+              <h2 className="text-lg font-extrabold text-[#1E2026]">Category Details</h2>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => setViewingCategory(null)}
                 className="rounded-lg p-1 text-[#9AA0AA] transition-colors hover:bg-[#FFF6EA] hover:text-[#1E2026]"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateCategory} className="mt-5 space-y-4">
+            <div className="mt-5 space-y-4 text-xs">
+              <div>
+                <span className="text-[11px] font-semibold text-[#6B707E] uppercase tracking-wider">Category Name</span>
+                <p className="mt-1 text-base font-bold text-[#1E2026]">{viewingCategory.name}</p>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-semibold text-[#6B707E] uppercase tracking-wider">Slug</span>
+                <p className="mt-1">
+                  <span className="inline-flex rounded-md border border-[#E7E2D8] bg-[#FFFBF3] px-2 py-0.5 font-mono text-xs font-medium text-[#6B707E]">
+                    /{viewingCategory.slug}
+                  </span>
+                </p>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-semibold text-[#6B707E] uppercase tracking-wider">Description</span>
+                <p className="mt-1 rounded-xl bg-[#FFFBF3] p-3 leading-relaxed text-[#1E2026] border border-[#E7E2D8]">
+                  {viewingCategory.description || "No description provided."}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-semibold text-[#6B707E] uppercase tracking-wider">Created At</span>
+                <p className="mt-1 font-medium text-[#4A4E58]">
+                  {new Date(viewingCategory.createdAt).toLocaleString()}
+                </p>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => setViewingCategory(null)}
+                  className="rounded-xl bg-[#14171C] px-5 py-2 text-xs font-semibold text-white hover:bg-neutral-800"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create / Edit Category Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-[#E7E2D8] bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between border-b border-[#E7E2D8] pb-4">
+              <h2 className="text-lg font-extrabold text-[#1E2026]">
+                {editingCategory ? "Edit category" : "Add new category"}
+              </h2>
+              <button
+                onClick={() => {
+                  setIsModalOpen(false)
+                  setEditingCategory(null)
+                }}
+                className="rounded-lg p-1 text-[#9AA0AA] transition-colors hover:bg-[#FFF6EA] hover:text-[#1E2026]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitCategory} className="mt-5 space-y-4">
               <div>
                 <label htmlFor="name" className="mb-1.5 block text-xs font-semibold text-[#1E2026]">
                   Category name *
@@ -333,7 +485,10 @@ export default function AdminCategoriesPage() {
               <div className="flex items-center justify-end gap-3 pt-3">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false)
+                    setEditingCategory(null)
+                  }}
                   className="rounded-xl border border-[#E7E2D8] bg-white px-4 py-2.5 text-xs font-semibold text-[#6B707E] transition-colors hover:bg-[#FFF6EA] hover:text-[#1E2026]"
                 >
                   Cancel
@@ -343,10 +498,47 @@ export default function AdminCategoriesPage() {
                   disabled={isSubmitting}
                   className="rounded-xl bg-gradient-to-r from-[#FF5A36] to-[#C23B1F] px-5 py-2.5 text-xs font-semibold text-white shadow-md shadow-[#FF5A36]/20 transition-all hover:opacity-95 disabled:opacity-50"
                 >
-                  {isSubmitting ? "Creating..." : "Create category"}
+                  {isSubmitting ? (editingCategory ? "Saving..." : "Creating...") : (editingCategory ? "Save changes" : "Create category")}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-rose-100 bg-white p-6 shadow-2xl">
+            <div className="flex flex-col items-center text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 ring-8 ring-rose-50/50">
+                <AlertTriangle className="h-6 w-6" />
+              </span>
+
+              <h3 className="mt-4 text-base font-extrabold text-[#1E2026]">Delete category?</h3>
+              <p className="mt-2 text-xs leading-relaxed text-[#6B707E]">
+                Are you sure you want to delete <span className="font-bold text-[#1E2026]">"{deletingCategory.name}"</span>? This action cannot be undone and may affect related services.
+              </p>
+
+              <div className="mt-6 flex w-full items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeletingCategory(null)}
+                  disabled={isDeleting}
+                  className="w-1/2 rounded-xl border border-[#E7E2D8] bg-white py-2.5 text-xs font-semibold text-[#6B707E] transition-colors hover:bg-[#FFF6EA] hover:text-[#1E2026] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                  className="w-1/2 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 py-2.5 text-xs font-semibold text-white shadow-md shadow-rose-600/20 transition-all hover:opacity-95 disabled:opacity-50"
+                >
+                  {isDeleting ? "Deleting..." : "Yes, Delete"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

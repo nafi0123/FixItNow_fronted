@@ -109,6 +109,55 @@ export const createTechnicianServiceAction = async (payload: CreateServicePayloa
   }
 };
 
+export const updateTechnicianServiceAction = async (serviceId: string, payload: Partial<CreateServicePayload>) => {
+  const token = await getAuthToken();
+  if (!token) return { success: false, message: "Unauthorized! Please log in." };
+
+  try {
+    const res = await fetch(`${getBackendUrl()}/api/technician/services/${serviceId}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    const result = await res.json();
+    if (result.success) {
+      try { (revalidateTag as any)("technician-services"); } catch {}
+      try { (revalidateTag as any)("public-services"); } catch {}
+    }
+    return result;
+  } catch (error) {
+    console.error("updateTechnicianServiceAction error:", error);
+    return { success: false, message: "Failed to update service." };
+  }
+};
+
+export const deleteTechnicianServiceAction = async (serviceId: string) => {
+  const token = await getAuthToken();
+  if (!token) return { success: false, message: "Unauthorized! Please log in." };
+
+  try {
+    const res = await fetch(`${getBackendUrl()}/api/technician/services/${serviceId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    const result = await res.json();
+    if (result.success) {
+      try { (revalidateTag as any)("technician-services"); } catch {}
+      try { (revalidateTag as any)("public-services"); } catch {}
+    }
+    return result;
+  } catch (error) {
+    console.error("deleteTechnicianServiceAction error:", error);
+    return { success: false, message: "Failed to delete service." };
+  }
+};
+
 export const getTechnicianBookingsAction = async (params?: { page?: number; limit?: number }) => {
   const token = await getAuthToken();
   if (!token) return { success: false, data: [] };

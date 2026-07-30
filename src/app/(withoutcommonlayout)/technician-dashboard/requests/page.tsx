@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CalendarCheck, CheckCircle2, Clock, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { ClipboardList, CheckCircle2, Clock, AlertCircle, ChevronLeft, ChevronRight, SearchX, User } from "lucide-react";
+import { toast } from "sonner";
 import { getTechnicianBookingsAction, updateTechnicianBookingStatusAction } from "../_actions/technicianActions";
 
 interface Booking {
@@ -17,130 +18,188 @@ interface Booking {
   createdAt: string;
 }
 
+interface MetaData {
+  page: number;
+  limit: number;
+  total: number;
+  totalPage: number;
+}
+
+const INK = "#14171C";
+const CORAL = "#FF5A36";
+const CORAL_DARK = "#C23B1F";
+const TEAL = "#0FA894";
+
 export default function TechnicianRequestsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [meta, setMeta] = useState({ page: 1, limit: 10, total: 0, totalPage: 1 });
+  const [meta, setMeta] = useState<MetaData>({ page: 1, limit: 10, total: 0, totalPage: 1 });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const fetchBookings = async () => {
     setLoading(true);
-    const res = await getTechnicianBookingsAction({ page: currentPage, limit: 10 });
+    const res = await getTechnicianBookingsAction({ page, limit });
     if (res && res.success) {
       setBookings(res.data || []);
       if (res.meta) setMeta(res.meta);
     } else {
       setBookings([]);
+      toast.error(res?.message || "Failed to load job requests");
     }
     setLoading(false);
   };
 
   useEffect(() => {
     fetchBookings();
-  }, [currentPage]);
+  }, [page, limit]);
 
   const handleStatusUpdate = async (bookingId: string, status: "ACCEPTED" | "DECLINED" | "COMPLETED") => {
     setActionLoading(bookingId);
     const res = await updateTechnicianBookingStatusAction(bookingId, status);
     if (res && res.success) {
-      setMessage({ type: "success", text: `Booking status updated to ${status}!` });
+      toast.success(res.message || `Booking status updated to ${status}!`);
       await fetchBookings();
     } else {
-      setMessage({ type: "error", text: res.message || "Failed to update booking status." });
+      toast.error(res.message || "Failed to update booking status.");
     }
     setActionLoading(null);
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex items-center justify-between border-b border-neutral-200 pb-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-[#14171C]">Job Requests & Bookings</h1>
-          <p className="text-xs text-neutral-500">Manage client booking requests, accept/decline jobs, and mark completed</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            style={{ backgroundColor: `${CORAL}12`, color: CORAL_DARK }}
+          >
+            <ClipboardList className="h-5 w-5" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-extrabold text-[#1E2026]">Job requests management</h1>
+            <p className="text-xs text-[#6B707E]">
+              Review client booking requests, update job statuses, and track completed work.
+            </p>
+          </div>
         </div>
       </div>
 
-      {message && (
-        <div
-          className={`flex items-center justify-between rounded-2xl p-4 text-xs font-semibold shadow-sm ${
-            message.type === "success"
-              ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border border-rose-200 bg-rose-50 text-rose-800"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {message.type === "success" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-rose-600" />}
-            <span>{message.text}</span>
-          </div>
-          <button onClick={() => setMessage(null)} className="text-neutral-400 hover:text-neutral-700">
-            Dismiss
-          </button>
+      {/* Control Bar */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-[#E7E2D8] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 text-xs text-[#6B707E]">
+          <span className="font-semibold text-[#1E2026]">All Assigned Bookings</span>
+          <span className="rounded-full bg-[#FFFBF3] px-2.5 py-0.5 font-bold text-[#FF5A36] border border-[#E7E2D8]">
+            {meta.total} total
+          </span>
         </div>
-      )}
 
-      <div className="rounded-3xl border border-[#E7E2D8] bg-white p-6 shadow-sm">
-        {loading ? (
-          <div className="space-y-4 py-8">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-16 animate-pulse rounded-2xl bg-neutral-100" />
-            ))}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 rounded-xl border border-[#E7E2D8] bg-[#FFFBF3] px-3 py-2 text-xs">
+            <span className="text-[#6B707E]">Show:</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="bg-transparent font-semibold text-[#1E2026] outline-none"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
           </div>
-        ) : bookings.length === 0 ? (
-          <div className="my-12 flex flex-col items-center justify-center p-8 text-center">
-            <CalendarCheck className="h-12 w-12 text-neutral-300" />
-            <h3 className="mt-3 text-sm font-bold text-[#14171C]">No job requests found</h3>
-            <p className="mt-1 text-xs text-neutral-400">Assigned customer bookings will appear here.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-neutral-200 bg-[#FFFBF3] text-neutral-500">
-                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Customer</th>
-                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Service Date</th>
-                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Amount</th>
-                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {bookings.map((booking) => (
-                  <tr key={booking.id} className="transition-colors hover:bg-neutral-50">
-                    <td className="px-4 py-4">
+        </div>
+      </div>
+
+      {/* Requests Table */}
+      <div className="overflow-hidden rounded-2xl border border-[#E7E2D8] bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="border-b border-[#E7E2D8] bg-[#FFFBF3] text-[11px] font-semibold uppercase tracking-wide text-[#6B707E]">
+              <tr>
+                <th className="px-6 py-4">Customer</th>
+                <th className="px-6 py-4">Requested Date</th>
+                <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E7E2D8]">
+              {loading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                  <tr key={index} className="animate-pulse">
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#14171C] font-bold text-white">
+                        <div className="h-8 w-8 shrink-0 rounded-lg bg-[#F1EEE6]" />
+                        <div className="h-3.5 w-32 rounded bg-[#F1EEE6]" />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-3.5 w-24 rounded bg-[#F1EEE6]" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-3.5 w-16 rounded bg-[#F1EEE6]" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-3.5 w-20 rounded bg-[#F1EEE6]" />
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="h-7 w-24 ml-auto rounded-lg bg-[#F1EEE6]" />
+                    </td>
+                  </tr>
+                ))
+              ) : bookings.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-16 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBF3] text-[#9AA0AA]">
+                        <SearchX className="h-5 w-5" />
+                      </span>
+                      <p className="text-sm font-medium text-[#1E2026]">No job requests found</p>
+                      <p className="text-xs text-[#6B707E]">Assigned customer bookings will appear here.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                bookings.map((booking) => (
+                  <tr key={booking.id} className="transition-colors hover:bg-[#FFFBF3]/60">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#14171C] font-bold text-white">
                           {booking.customer?.name ? booking.customer.name.charAt(0).toUpperCase() : "C"}
                         </span>
                         <div>
-                          <p className="font-bold text-[#14171C]">{booking.customer?.name || "Customer"}</p>
-                          <p className="text-[11px] text-neutral-400">{booking.customer?.email || "No email"}</p>
+                          <p className="font-semibold text-[#1E2026]">{booking.customer?.name || "Customer"}</p>
+                          <p className="text-[11px] text-[#6B707E]">{booking.customer?.email || "No email provided"}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-neutral-600 font-medium">
-                      {booking.serviceDate ? new Date(booking.serviceDate).toLocaleDateString() : new Date(booking.createdAt).toLocaleDateString()}
+                    <td className="px-6 py-4 text-[#4A4E58] font-medium">
+                      {booking.serviceDate ? new Date(booking.serviceDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : new Date(booking.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                     </td>
-                    <td className="px-4 py-4 font-bold text-[#14171C]">
+                    <td className="px-6 py-4 font-bold text-[#1E2026]">
                       ${booking.price || 50}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
                           booking.status === "ACCEPTED"
-                            ? "bg-teal-50 text-[#0FA894]"
+                            ? "bg-teal-50 text-[#0FA894] border border-teal-100"
                             : booking.status === "COMPLETED"
-                            ? "bg-emerald-50 text-emerald-700"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
                             : booking.status === "DECLINED"
-                            ? "bg-rose-50 text-rose-700"
-                            : "bg-amber-50 text-amber-700"
+                            ? "bg-rose-50 text-rose-700 border border-rose-100"
+                            : "bg-amber-50 text-amber-700 border border-amber-100"
                         }`}
                       >
                         {booking.status}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right">
+                    <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {booking.status === "PENDING" && (
                           <>
@@ -172,54 +231,53 @@ export default function TechnicianRequestsPage() {
                         )}
 
                         {(booking.status === "COMPLETED" || booking.status === "DECLINED") && (
-                          <span className="text-[11px] text-neutral-400 italic">No action needed</span>
+                          <span className="text-[11px] text-[#9AA0AA] italic">Completed</span>
                         )}
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-        {meta.totalPage > 1 && (
-          <div className="mt-6 flex items-center justify-between border-t border-neutral-100 pt-4">
+        {/* Pagination Footer */}
+        <div className="flex flex-col items-center justify-between gap-3 border-t border-[#E7E2D8] bg-[#FFFBF3] px-6 py-4 sm:flex-row">
+          <p className="text-xs text-[#6B707E]">
+            Showing{" "}
+            <span className="font-semibold text-[#1E2026]">
+              {meta.total > 0 ? (meta.page - 1) * meta.limit + 1 : 0}
+            </span>{" "}
+            to{" "}
+            <span className="font-semibold text-[#1E2026]">
+              {Math.min(meta.page * meta.limit, meta.total)}
+            </span>{" "}
+            of <span className="font-semibold text-[#1E2026]">{meta.total}</span> requests
+          </p>
+
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage <= 1 || loading}
-              className="flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page <= 1 || loading}
+              className="flex h-8 items-center justify-center gap-1 rounded-lg border border-[#E7E2D8] bg-white px-3 text-xs font-medium text-[#1E2026] transition-colors hover:border-[#FF5A36]/40 hover:bg-[#FFF6EA] disabled:opacity-50"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3.5 w-3.5" />
               Previous
             </button>
-
-            <div className="flex items-center gap-1">
-              {Array.from({ length: meta.totalPage }).map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`h-7 w-7 rounded-lg text-xs font-bold ${
-                    currentPage === i + 1
-                      ? "bg-[#FF5A36] text-white"
-                      : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-
+            <span className="text-xs font-semibold text-[#1E2026]">
+              Page {meta.page} of {meta.totalPage || 1}
+            </span>
             <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, meta.totalPage))}
-              disabled={currentPage >= meta.totalPage || loading}
-              className="flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+              onClick={() => setPage((p) => Math.min(p + 1, meta.totalPage))}
+              disabled={page >= meta.totalPage || loading}
+              className="flex h-8 items-center justify-center gap-1 rounded-lg border border-[#E7E2D8] bg-white px-3 text-xs font-medium text-[#1E2026] transition-colors hover:border-[#FF5A36]/40 hover:bg-[#FFF6EA] disabled:opacity-50"
             >
               Next
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
