@@ -202,28 +202,7 @@ const RegisterForm = () => {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-[#E7E2D8]" />
-            <span className="text-xs text-[#9AA0AA]">or continue with</span>
-            <div className="h-px flex-1 bg-[#E7E2D8]" />
-          </div>
 
-          {/* Social signup */}
-          <div className="grid grid-cols-2 gap-3">
-            <button type="button" className="flex items-center justify-center gap-2 rounded-xl border border-[#E7E2D8] bg-white py-2.5 text-sm font-medium text-[#1E2026] transition-colors hover:border-[#FF5A36]/40">
-              <svg className="h-4 w-4" viewBox="0 0 24 24">
-                <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.2s2.7-6.2 6-6.2c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.9 3.4 14.7 2.4 12 2.4 6.9 2.4 2.7 6.6 2.7 12S6.9 21.6 12 21.6c6.9 0 9.3-4.9 9.3-7.4 0-.5 0-.9-.1-1.3H12Z" />
-              </svg>
-              Google
-            </button>
-            <button type="button" className="flex items-center justify-center gap-2 rounded-xl border border-[#E7E2D8] bg-white py-2.5 text-sm font-medium text-[#1E2026] transition-colors hover:border-[#FF5A36]/40">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="#1877F2">
-                <path d="M13.5 21v-7.5h2.5l.4-3H13.5V8.4c0-.87.24-1.46 1.49-1.46H16.5V4.35A20 20 0 0 0 14.2 4.2c-2.28 0-3.84 1.39-3.84 3.95v2.35H8v3h2.36V21h3.14Z" />
-              </svg>
-              Facebook
-            </button>
-          </div>
 
           <p className="mt-8 text-center text-sm text-[#6B707E]">
             Already have an account?{" "}

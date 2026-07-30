@@ -10,7 +10,6 @@ export type LoginState = {
     message?: string;
     data?: {
         accessToken: string;
-        refreshToken: string;
     };
 } | null | undefined;
 
@@ -24,7 +23,7 @@ export const loginAction = async (redirectTo: string, prevState: LoginState, for
         password
     }
 
-    const backendUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL ;
+    const backendUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
     let result;
     try {
@@ -52,12 +51,6 @@ export const loginAction = async (redirectTo: string, prevState: LoginState, for
         cookieStore.set("accessToken", result.data.accessToken, {
             httpOnly: true,
             maxAge: 60 * 60 * 24,
-            sameSite: "lax",
-            path: "/"
-        });
-        cookieStore.set("refreshToken", result.data.refreshToken, {
-            httpOnly: true,
-            maxAge: 60 * 60 * 24 * 7,
             sameSite: "lax",
             path: "/"
         });
@@ -111,7 +104,7 @@ export const registerAction = async (prevState: RegisterState, formData: FormDat
         role
     }
 
-    const backendUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "https://fix-it-now-brown.vercel.app";
+    const backendUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
     let result;
     try {
@@ -143,7 +136,6 @@ export const registerAction = async (prevState: RegisterState, formData: FormDat
 export const logoutAction = async () => {
     const cookieStore = await cookies();
     cookieStore.delete("accessToken");
-    cookieStore.delete("refreshToken");
     redirect("/login");
 }
 
@@ -155,6 +147,35 @@ export const getCurrentUser = async () => {
         const decoded = jwt.decode(token) as JwtPayload;
         return decoded;
     } catch {
+        return null;
+    }
+}
+
+export const getMeAction = async () => {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("accessToken")?.value;
+
+    if (!token) return null;
+
+    const backendUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+
+    try {
+        const res = await fetch(`${backendUrl}/api/auth/me`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            cache: "no-store"
+        });
+
+        const result = await res.json();
+        if (result && result.success) {
+            return result.data;
+        }
+        return null;
+    } catch (error) {
+        console.error("getMeAction error:", error);
         return null;
     }
 }

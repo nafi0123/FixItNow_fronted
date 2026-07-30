@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,7 +21,7 @@ import {
   Star,
   User,
 } from "lucide-react";
-import { logoutAction } from "../(authGroup)/_actions/authActions";
+import { logoutAction, getMeAction } from "../(authGroup)/_actions/authActions";
 
 // Same palette as the rest of the site
 const INK = "#14171C";
@@ -55,6 +55,12 @@ const navByRole: Record<Role, { label: string; href: string; icon: typeof Layout
   ],
 };
 
+interface UserProfile {
+  name?: string;
+  email?: string;
+  role?: string;
+}
+
 export default function DashboardLayout({
   role,
   children,
@@ -64,10 +70,27 @@ export default function DashboardLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const pathname = usePathname();
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      const data = await getMeAction();
+      if (data) {
+        setProfile(data);
+      }
+    };
+    loadProfile();
+  }, []);
+
   let activeRole: Role = role || "customer";
-  if (!role) {
+
+  if (profile?.role) {
+    const fetchedRole = profile.role.toLowerCase();
+    if (fetchedRole === "customer" || fetchedRole === "technician" || fetchedRole === "admin") {
+      activeRole = fetchedRole as Role;
+    }
+  } else if (!role) {
     if (pathname.startsWith("/admin-dashboard")) {
       activeRole = "admin";
     } else if (pathname.startsWith("/technician-dashboard")) {
@@ -79,12 +102,30 @@ export default function DashboardLayout({
 
   const navItems = navByRole[activeRole] || navByRole.customer;
 
-  const user =
-    activeRole === "customer"
-      ? { name: "Sadia Afrin", meta: "Customer", initials: "SA" }
-      : activeRole === "technician"
-      ? { name: "Rafiq Hossain", meta: "Electrician · 6 yrs", initials: "RH" }
-      : { name: "System Admin", meta: "Administrator", initials: "AD" };
+  const displayName = profile?.name || "User";
+  const displayEmail = profile?.email || "";
+  const displayMeta = profile?.role
+    ? profile.role === "CUSTOMER"
+      ? "Customer"
+      : profile.role === "TECHNICIAN"
+      ? "Technician"
+      : "Admin"
+    : activeRole === "customer"
+    ? "Customer"
+    : activeRole === "technician"
+    ? "Technician"
+    : "Admin";
+
+  const getInitials = (name: string) => {
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const userInitials = getInitials(displayName);
 
   const handleLogout = async () => {
     await logoutAction();
@@ -167,11 +208,11 @@ export default function DashboardLayout({
               className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white"
               style={{ backgroundColor: CORAL }}
             >
-              {user.initials}
+              {userInitials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-              <p className="truncate text-xs text-white/50">{user.meta}</p>
+              <p className="truncate text-sm font-semibold text-white">{displayName}</p>
+              <p className="truncate text-xs text-white/50">{displayEmail || displayMeta}</p>
             </div>
           </div>
           <button
@@ -226,16 +267,21 @@ export default function DashboardLayout({
                   className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
                   style={{ backgroundColor: INK }}
                 >
-                  {user.initials}
+                  {userInitials}
                 </div>
                 <ChevronDown className="h-3.5 w-3.5 text-[#6B707E]" />
               </button>
 
               {userMenuOpen && (
                 <div className="absolute right-0 top-11 w-48 rounded-xl border border-[#E7E2D8] bg-white p-1.5 shadow-lg">
-                  <p className="truncate px-2.5 py-1.5 text-xs font-semibold text-[#1E2026]">
-                    {user.name}
+                  <p className="truncate px-2.5 py-1 text-xs font-semibold text-[#1E2026]">
+                    {displayName}
                   </p>
+                  {displayEmail && (
+                    <p className="truncate px-2.5 pb-1 text-[10px] text-[#6B707E]">
+                      {displayEmail}
+                    </p>
+                  )}
                   <Link
                     href="/dashboard/settings"
                     className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-[#4A4E58] hover:bg-[#FFF6EA]"
