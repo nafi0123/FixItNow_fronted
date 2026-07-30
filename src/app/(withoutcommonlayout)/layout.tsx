@@ -33,6 +33,7 @@ type Role = "customer" | "technician" | "admin";
 const navByRole: Record<Role, { label: string; href: string; icon: typeof LayoutDashboard }[]> = {
   customer: [
     { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+    { label: "My Bookings", href: "/dashboard/bookings", icon: CalendarCheck },
   ],
   technician: [
     { label: "Overview", href: "/technician-dashboard", icon: LayoutDashboard },
@@ -100,13 +101,13 @@ export default function DashboardLayout({
     ? profile.role === "CUSTOMER"
       ? "Customer"
       : profile.role === "TECHNICIAN"
-      ? "Technician"
-      : "Admin"
+        ? "Technician"
+        : "Admin"
     : activeRole === "customer"
-    ? "Customer"
-    : activeRole === "technician"
-    ? "Technician"
-    : "Admin";
+      ? "Customer"
+      : activeRole === "technician"
+        ? "Technician"
+        : "Admin";
 
   const getInitials = (name: string) => {
     if (!name) return "U";
@@ -136,9 +137,8 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col transition-transform duration-200 lg:static lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col transition-transform duration-200 lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
         style={{ backgroundColor: INK }}
       >
         <div className="flex h-16 items-center justify-between px-5">
@@ -168,8 +168,8 @@ export default function DashboardLayout({
           {activeRole === "customer"
             ? "Customer account"
             : activeRole === "technician"
-            ? "Technician account"
-            : "Admin account"}
+              ? "Technician account"
+              : "Admin account"}
         </div>
 
         <nav className="mt-6 flex-1 space-y-1 px-3">
@@ -181,9 +181,8 @@ export default function DashboardLayout({
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive ? "text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
-                }`}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${isActive ? "text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+                  }`}
                 style={isActive ? { backgroundColor: `${CORAL}1A`, color: CORAL } : undefined}
               >
                 <Icon className="h-4 w-4" />
@@ -279,8 +278,8 @@ export default function DashboardLayout({
                       activeRole === "technician"
                         ? "/technician-dashboard/profile"
                         : activeRole === "admin"
-                        ? "/admin-dashboard"
-                        : "/dashboard"
+                          ? "/admin-dashboard"
+                          : "/dashboard"
                     }
                     onClick={() => setUserMenuOpen(false)}
                     className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-[#4A4E58] hover:bg-[#FFF6EA]"

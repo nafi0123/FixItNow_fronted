@@ -152,6 +152,10 @@ export const getCurrentUser = async () => {
     }
 }
 
+export const getCurrentUserAction = async () => {
+    return await getCurrentUser();
+}
+
 export const getMeAction = async () => {
     const cookieStore = await cookies();
     const token = cookieStore.get("accessToken")?.value;

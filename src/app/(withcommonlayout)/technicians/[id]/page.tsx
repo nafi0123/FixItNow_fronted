@@ -2,31 +2,72 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { Star, MapPin, Award, CheckCircle2, Clock, Calendar, MessageSquare, ArrowLeft, ShieldCheck, Wrench, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  Star,
+  MapPin,
+  Award,
+  CheckCircle2,
+  Clock,
+  Calendar,
+  MessageSquare,
+  ArrowLeft,
+  ShieldCheck,
+  Wrench,
+  X,
+  Loader2,
+  ArrowRight,
+  Tag
+} from "lucide-react";
 import { getSingleTechnicianAction, getPublicCategoriesAction, TechnicianProfile, Category } from "../../_actions/publicAction";
-
-const CORAL = "#FF5A36";
-const TEAL = "#0FA894";
+import { getCurrentUserAction } from "@/src/app/(authGroup)/_actions/authActions";
+import { createBookingAction, getUserBookingsAction } from "../../_actions/bookingAction";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+const DEFAULT_SLOTS = [
+  "09:00 AM - 11:00 AM",
+  "11:00 AM - 01:00 PM",
+  "02:00 PM - 04:00 PM",
+  "04:00 PM - 06:00 PM",
+  "06:00 PM - 08:00 PM"
+];
+
 export default function SingleTechnicianPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const { id } = resolvedParams;
+  const router = useRouter();
 
   const [technician, setTechnician] = useState<TechnicianProfile | null>(null);
   const [categoriesMap, setCategoriesMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
+
+  // Active Booking Check
+  const [hasActiveBooking, setHasActiveBooking] = useState(false);
+  const [activeBookingStatus, setActiveBookingStatus] = useState<string | null>(null);
+
+  // Booking Modal & State
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
+
+  // Form State
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+  const [bookingDate, setBookingDate] = useState(tomorrowStr);
+  const [bookingSlot, setBookingSlot] = useState(DEFAULT_SLOTS[0]);
+  const [customSlot, setCustomSlot] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [selectedServicePrice, setSelectedServicePrice] = useState<number>(35);
 
   useEffect(() => {
-    const fetchProfileAndCategories = async () => {
+    const fetchProfileCategoriesAndBookings = async () => {
       setLoading(true);
-      const [res, catRes] = await Promise.all([
+      const [res, catRes, user] = await Promise.all([
         getSingleTechnicianAction(id),
         getPublicCategoriesAction(),
+        getCurrentUserAction(),
       ]);
 
       if (catRes && catRes.success && Array.isArray(catRes.data)) {
@@ -38,12 +79,39 @@ export default function SingleTechnicianPage({ params }: PageProps) {
       }
 
       if (res && res.success && res.data) {
-        setTechnician(res.data);
+        const tech: TechnicianProfile = res.data;
+        setTechnician(tech);
+        setSelectedServicePrice(tech.basePrice || tech.hourlyRate || 35);
       }
+
+      // Check if logged in customer has an ongoing (PENDING or ACCEPTED) booking for this technician
+      if (user && String(user.role || "").toUpperCase() === "CUSTOMER") {
+        try {
+          const bookingsRes = await getUserBookingsAction();
+          if (bookingsRes && bookingsRes.success && Array.isArray(bookingsRes.data)) {
+            const activeBooking = bookingsRes.data.find(
+              (b: any) =>
+                b.technicianProfileId === id &&
+                (b.status === "PENDING" || b.status === "ACCEPTED")
+            );
+
+            if (activeBooking) {
+              setHasActiveBooking(true);
+              setActiveBookingStatus(activeBooking.status);
+            } else {
+              setHasActiveBooking(false);
+              setActiveBookingStatus(null);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching user bookings on mount:", err);
+        }
+      }
+
       setLoading(false);
     };
 
-    fetchProfileAndCategories();
+    fetchProfileCategoriesAndBookings();
   }, [id]);
 
   const getCleanSkillName = (skill: string) => {
@@ -69,6 +137,76 @@ export default function SingleTechnicianPage({ params }: PageProps) {
   const workingHours = technician?.availability?.workingHours || null;
   const workingDays = Array.isArray(technician?.availability?.workingDays) ? technician.availability.workingDays : null;
 
+  const handleBookNowClick = async () => {
+    setBookingLoading(true);
+    try {
+      const user = await getCurrentUserAction();
+      setBookingLoading(false);
+
+      if (!user) {
+        toast.error("Please log in as a Customer to book this technician.");
+        const currentPath = `/technicians/${id}`;
+        router.push(`/login?redirectTo=${encodeURIComponent(currentPath)}`);
+        return;
+      }
+
+      const role = String(user.role || "").toUpperCase();
+      if (role !== "CUSTOMER") {
+        toast.error(`Only Customer accounts can book technicians. You are currently logged in as a ${role}.`);
+        const currentPath = `/technicians/${id}`;
+        router.push(`/login?redirectTo=${encodeURIComponent(currentPath)}`);
+        return;
+      }
+
+      // Customer is authenticated! Open modal
+      setIsBookingModalOpen(true);
+    } catch (error) {
+      setBookingLoading(false);
+      console.error("Auth check error:", error);
+      toast.error("Failed to check login status. Please try logging in.");
+      router.push(`/login?redirectTo=${encodeURIComponent(`/technicians/${id}`)}`);
+    }
+  };
+
+  const handleConfirmBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const selectedSlot = customSlot.trim() !== "" ? customSlot.trim() : bookingSlot;
+    if (!bookingDate) {
+      toast.error("Please select a valid booking date.");
+      return;
+    }
+    if (!selectedSlot) {
+      toast.error("Please select a time slot.");
+      return;
+    }
+
+    setBookingLoading(true);
+
+    try {
+      const res = await createBookingAction({
+        technicianProfileId: id,
+        bookingDate,
+        slot: selectedSlot,
+        serviceId: selectedServiceId || undefined,
+      });
+
+      if (res && res.success) {
+        toast.success(res.message || "Appointment booked successfully! Track your status in dashboard.");
+        setHasActiveBooking(true);
+        setActiveBookingStatus("PENDING");
+        setIsBookingModalOpen(false);
+      } else {
+        toast.error(res?.message || "Failed to create booking. Please try again.");
+      }
+    } catch (error) {
+      console.error("Booking error:", error);
+      toast.error("An error occurred while creating booking.");
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] py-20">
@@ -92,8 +230,10 @@ export default function SingleTechnicianPage({ params }: PageProps) {
     );
   }
 
+  const todayISO = new Date().toISOString().split("T")[0];
+
   return (
-    <div className="min-h-screen bg-[#FAF8F5] pb-24">
+    <div className="min-h-screen bg-[#FAF8F5] pb-24 relative">
       {/* Header Banner */}
       <div className="bg-[#14171C] pt-8 pb-16 text-white">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -198,6 +338,32 @@ export default function SingleTechnicianPage({ params }: PageProps) {
                   </div>
                 </div>
               )}
+
+              {/* Offered Services Section */}
+              {technician.services && technician.services.length > 0 && (
+                <div className="mt-6 border-t border-neutral-100 pt-6">
+                  <h3 className="text-sm font-bold text-[#14171C] flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-[#FF5A36]" />
+                    Offered Services & Pricing
+                  </h3>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {technician.services.map((srv) => (
+                      <div key={srv.id} className="rounded-2xl border border-[#E7E2D8] bg-[#FFFBF3] p-4 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-[#14171C]">{srv.name}</span>
+                            <span className="font-extrabold text-xs text-[#FF5A36]">${srv.price}</span>
+                          </div>
+                          <p className="mt-1 text-[11px] text-neutral-500 line-clamp-2">{srv.description}</p>
+                        </div>
+                        <span className="mt-2 text-[10px] text-neutral-400 flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-[#0FA894]" /> Est. Duration: {srv.duration}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Customer Reviews Section */}
@@ -277,30 +443,233 @@ export default function SingleTechnicianPage({ params }: PageProps) {
                   </span>
                   <span className="font-semibold text-[#14171C]">100% Satisfaction</span>
                 </div>
+                {workingHours && (
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4 text-[#FF5A36]" />
+                      Working Hours:
+                    </span>
+                    <span className="font-semibold text-[#14171C]">{workingHours}</span>
+                  </div>
+                )}
               </div>
 
-              {bookingSuccess ? (
-                <div className="mt-6 rounded-2xl bg-emerald-50 p-4 text-center text-xs font-semibold text-emerald-800">
-                  <CheckCircle2 className="mx-auto h-6 w-6 text-emerald-600 mb-1" />
-                  Booking Request Sent! The technician will contact you shortly.
+              {/* Primary "Book This Technician Now" button */}
+              <button
+                onClick={handleBookNowClick}
+                disabled={!isTechAvailable || bookingLoading}
+                className={`mt-6 w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-bold text-white shadow-lg transition-all active:scale-95 ${
+                  isTechAvailable
+                    ? "bg-[#FF5A36] shadow-orange-500/20 hover:bg-[#C23B1F]"
+                    : "bg-neutral-400 cursor-not-allowed opacity-60"
+                }`}
+              >
+                {bookingLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking Session...
+                  </>
+                ) : isTechAvailable ? (
+                  "Book This Technician Now"
+                ) : (
+                  "Technician Currently Offline"
+                )}
+              </button>
+
+              {hasActiveBooking && (
+                <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 py-2 px-3 text-[11px] font-semibold text-emerald-800">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  Existing Booking: {activeBookingStatus}
                 </div>
-              ) : (
-                <button
-                  onClick={() => setBookingSuccess(true)}
-                  disabled={!isTechAvailable}
-                  className={`mt-6 w-full rounded-2xl py-3 text-xs font-bold text-white shadow-lg transition-all active:scale-95 ${
-                    isTechAvailable
-                      ? "bg-[#FF5A36] shadow-orange-500/20 hover:bg-[#C23B1F]"
-                      : "bg-neutral-400 cursor-not-allowed opacity-60"
-                  }`}
-                >
-                  {isTechAvailable ? "Book This Technician Now" : "Technician Currently Offline"}
-                </button>
               )}
+
+              <div className="mt-4 border-t border-neutral-100 pt-4 text-center">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#FF5A36] hover:underline"
+                >
+                  View My Bookings in Dashboard
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Booking Form Modal */}
+      {isBookingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-neutral-100">
+            {/* Modal Close Button */}
+            <button
+              onClick={() => setIsBookingModalOpen(false)}
+              className="absolute right-5 top-5 text-neutral-400 hover:text-neutral-700 p-1 rounded-full hover:bg-neutral-100 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FF5A36]/10 text-[#FF5A36]">
+                <Calendar className="h-6 w-6" />
+              </span>
+              <div>
+                <h3 className="text-lg font-extrabold text-[#14171C]">Book Appointment</h3>
+                <p className="text-xs text-neutral-500">With {technician.user?.name}</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmBooking} className="mt-6 space-y-5">
+              {/* Optional Service Offered Selector */}
+              {technician.services && technician.services.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-[#14171C] mb-1.5">
+                    Select Offered Service
+                  </label>
+                  <select
+                    value={selectedServiceId}
+                    onChange={(e) => {
+                      setSelectedServiceId(e.target.value);
+                      const srv = technician.services?.find((s) => s.id === e.target.value);
+                      if (srv) {
+                        setSelectedServicePrice(srv.price);
+                        if (srv.duration) setBookingSlot(srv.duration);
+                      } else {
+                        setSelectedServicePrice(technician.basePrice || technician.hourlyRate || 35);
+                      }
+                    }}
+                    className="w-full rounded-2xl border border-neutral-200 bg-[#FFFBF3] px-4 py-3 text-xs font-semibold text-[#14171C] outline-none focus:border-[#FF5A36] focus:ring-1 focus:ring-[#FF5A36]"
+                  >
+                    <option value="">Standard General Hourly Rate (${technician.basePrice || technician.hourlyRate || 35}/hr)</option>
+                    {technician.services.map((srv) => (
+                      <option key={srv.id} value={srv.id}>
+                        {srv.name} — ${srv.price} ({srv.duration})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Technician Schedule info badge */}
+              {workingHours && (
+                <div className="flex items-center gap-2.5 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2.5 text-xs text-amber-900">
+                  <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+                  <div>
+                    <span className="font-bold">Technician Active Hours: </span>
+                    <span>{workingHours}</span>
+                    {workingDays && workingDays.length > 0 && (
+                      <span className="block text-[11px] text-amber-700">Days: {workingDays.join(", ")}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Date selection */}
+              <div>
+                <label className="block text-xs font-bold text-[#14171C] mb-1.5">
+                  Select Date
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="date"
+                    min={todayISO}
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    required
+                    className="w-full rounded-2xl border border-neutral-200 bg-[#FFFBF3] px-4 py-3 text-xs font-semibold text-[#14171C] outline-none focus:border-[#FF5A36] focus:ring-1 focus:ring-[#FF5A36]"
+                  />
+                </div>
+              </div>
+
+              {/* Slot selection */}
+              <div>
+                <label className="block text-xs font-bold text-[#14171C] mb-1.5">
+                  Select Preferred Time Slot
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {DEFAULT_SLOTS.map((slot) => (
+                    <button
+                      type="button"
+                      key={slot}
+                      onClick={() => {
+                        setBookingSlot(slot);
+                        setCustomSlot("");
+                      }}
+                      className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all text-left flex items-center justify-between ${
+                        bookingSlot === slot && !customSlot
+                          ? "border-[#FF5A36] bg-[#FF5A36]/10 text-[#FF5A36] shadow-sm"
+                          : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                      }`}
+                    >
+                      <span>{slot}</span>
+                      {bookingSlot === slot && !customSlot && (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#FF5A36]" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom slot input */}
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    placeholder="Or enter custom time (e.g. 05:30 PM)"
+                    value={customSlot}
+                    onChange={(e) => setCustomSlot(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs text-neutral-800 outline-none focus:border-[#FF5A36]"
+                  />
+                </div>
+              </div>
+
+              {/* Price & Technician Profile Summary */}
+              <div className="rounded-2xl bg-[#FFFBF3] border border-[#E7E2D8] p-4 text-xs space-y-2">
+                <div className="flex justify-between text-neutral-600">
+                  <span>Standard Rate</span>
+                  <span className="font-bold text-[#14171C]">${selectedServicePrice} / hr</span>
+                </div>
+                <div className="flex justify-between text-neutral-600">
+                  <span>Booking Date</span>
+                  <span className="font-semibold text-[#14171C]">{bookingDate}</span>
+                </div>
+                <div className="flex justify-between text-neutral-600">
+                  <span>Time Slot</span>
+                  <span className="font-semibold text-[#14171C]">{customSlot || bookingSlot}</span>
+                </div>
+                <div className="border-t border-neutral-200 pt-2 flex justify-between font-bold text-sm text-[#14171C]">
+                  <span>Initial Status</span>
+                  <span className="text-amber-600 uppercase text-xs">PENDING APPROVAL</span>
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBookingModalOpen(false)}
+                  className="flex-1 rounded-2xl border border-neutral-200 py-3 text-xs font-bold text-neutral-600 hover:bg-neutral-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={bookingLoading}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#FF5A36] py-3 text-xs font-bold text-white shadow-lg shadow-orange-500/20 hover:bg-[#C23B1F] transition-all disabled:opacity-50"
+                >
+                  {bookingLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Confirming...
+                    </>
+                  ) : (
+                    "Confirm Booking"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

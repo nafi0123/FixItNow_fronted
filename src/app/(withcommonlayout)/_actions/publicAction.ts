@@ -63,6 +63,7 @@ export interface TechnicianProfile {
         email: string;
     };
     reviews?: TechnicianReview[];
+    services?: Service[];
     createdAt?: string;
     updatedAt?: string;
 }

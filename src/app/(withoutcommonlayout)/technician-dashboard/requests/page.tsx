@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ClipboardList, ChevronLeft, ChevronRight, SearchX, Search, X } from "lucide-react";
+import { ClipboardList, ChevronLeft, ChevronRight, SearchX, Search, X, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { getTechnicianBookingsAction, updateTechnicianBookingStatusAction } from "../_actions/technicianActions";
 
@@ -9,11 +9,20 @@ interface Booking {
   id: string;
   serviceId?: string;
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "COMPLETED";
+  bookingDate?: string;
   serviceDate?: string;
+  slot?: string;
   price?: number;
   customer?: {
     name: string;
     email: string;
+  };
+  technicianProfile?: {
+    basePrice?: number;
+    user?: {
+      name: string;
+      email: string;
+    };
   };
   createdAt: string;
 }
@@ -150,7 +159,7 @@ export default function TechnicianRequestsPage() {
             <thead className="border-b border-[#E7E2D8] bg-[#FFFBF3] text-[11px] font-semibold uppercase tracking-wide text-[#6B707E]">
               <tr>
                 <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Requested Date</th>
+                <th className="px-6 py-4">Requested Date & Slot</th>
                 <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -207,10 +216,37 @@ export default function TechnicianRequestsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-[#4A4E58] font-medium">
-                      {booking.serviceDate ? new Date(booking.serviceDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : new Date(booking.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                      <div>
+                        <p className="font-semibold text-[#1E2026]">
+                          {booking.bookingDate
+                            ? new Date(booking.bookingDate).toLocaleDateString("en-US", {
+                                weekday: "short",
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : booking.serviceDate
+                            ? new Date(booking.serviceDate).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : new Date(booking.createdAt).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                        </p>
+                        {booking.slot && (
+                          <span className="inline-flex items-center gap-1 mt-0.5 text-[11px] text-[#6B707E]">
+                            <Clock className="h-3 w-3 text-[#FF5A36]" />
+                            {booking.slot}
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 font-bold text-[#1E2026]">
-                      ${booking.price || 50}
+                    <td className="px-6 py-4 font-extrabold text-[#1E2026]">
+                      ${booking.price ?? booking.technicianProfile?.basePrice ?? 50}
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -259,7 +295,7 @@ export default function TechnicianRequestsPage() {
                         )}
 
                         {(booking.status === "COMPLETED" || booking.status === "DECLINED") && (
-                          <span className="text-[11px] text-[#9AA0AA] italic">Completed</span>
+                          <span className="text-[11px] text-[#9AA0AA] italic font-medium">Completed</span>
                         )}
                       </div>
                     </td>

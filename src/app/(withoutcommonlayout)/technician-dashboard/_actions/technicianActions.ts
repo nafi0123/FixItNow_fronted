@@ -175,7 +175,7 @@ export const getTechnicianBookingsAction = async (params?: { page?: number; limi
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      next: { revalidate: 10, tags: ["technician-bookings"] },
+      cache: "no-store",
     });
     return await res.json();
   } catch (error) {

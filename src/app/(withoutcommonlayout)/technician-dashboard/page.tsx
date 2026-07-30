@@ -17,6 +17,7 @@ import {
   Sparkles,
   Edit3,
   Loader2,
+  SearchX,
 } from "lucide-react";
 import { getPublicCategoriesAction, Category } from "@/src/app/(withcommonlayout)/_actions/publicAction";
 import {
@@ -34,11 +35,20 @@ interface Booking {
   id: string;
   serviceId?: string;
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "COMPLETED";
+  bookingDate?: string;
   serviceDate?: string;
+  slot?: string;
   price?: number;
   customer?: {
     name: string;
     email: string;
+  };
+  technicianProfile?: {
+    basePrice?: number;
+    user?: {
+      name: string;
+      email: string;
+    };
   };
   createdAt: string;
 }
@@ -316,74 +326,101 @@ export default function TechnicianDashboardPage() {
       </div>
 
       {/* Bookings & Job Requests Table */}
-      <div className="rounded-3xl border border-[#E7E2D8] bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-neutral-100 pb-4">
+      <div className="overflow-hidden rounded-2xl border border-[#E7E2D8] bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#E7E2D8] pb-4">
           <div>
             <h2 className="text-lg font-bold text-[#14171C]">Assigned Job Requests</h2>
-            <p className="text-xs text-neutral-500">Review client booking requests and update status</p>
+            <p className="text-xs text-[#6B707E]">Review client booking requests and update status</p>
           </div>
 
-          <span className="text-xs font-semibold text-neutral-600">
-            Page {meta.page} of {meta.totalPage} ({meta.total} total)
+          <span className="text-xs font-semibold text-[#6B707E]">
+            Page {meta.page} of {meta.totalPage || 1} ({meta.total} total)
           </span>
         </div>
 
         {loading ? (
-          <div className="space-y-4 py-8">
+          <div className="space-y-3 py-6">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-2xl bg-neutral-100" />
+              <div key={i} className="h-16 animate-pulse rounded-xl bg-[#F1EEE6]" />
             ))}
           </div>
         ) : bookings.length === 0 ? (
           <div className="my-12 flex flex-col items-center justify-center p-8 text-center">
-            <CalendarCheck className="h-12 w-12 text-neutral-300" />
-            <h3 className="mt-3 text-sm font-bold text-[#14171C]">No job requests found</h3>
-            <p className="mt-1 text-xs text-neutral-400">
+            <SearchX className="h-10 w-10 text-[#9AA0AA]" />
+            <h3 className="mt-3 text-sm font-bold text-[#1E2026]">No job requests found</h3>
+            <p className="mt-1 text-xs text-[#6B707E]">
               When customers book your services, requests will appear here.
             </p>
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-neutral-200 bg-[#FFFBF3] text-neutral-500">
-                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Customer</th>
-                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Requested Date</th>
-                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Price</th>
-                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider">Actions</th>
+              <thead className="border-b border-[#E7E2D8] bg-[#FFFBF3] text-[11px] font-semibold uppercase tracking-wide text-[#6B707E]">
+                <tr>
+                  <th className="px-4 py-3">Customer</th>
+                  <th className="px-4 py-3">Requested Date & Slot</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-[#E7E2D8]">
                 {bookings.map((booking) => (
-                  <tr key={booking.id} className="transition-colors hover:bg-neutral-50/80">
+                  <tr key={booking.id} className="transition-colors hover:bg-[#FFFBF3]/60">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#14171C] font-bold text-white">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#14171C] font-bold text-white">
                           {booking.customer?.name ? booking.customer.name.charAt(0).toUpperCase() : "C"}
                         </span>
                         <div>
-                          <p className="font-bold text-[#14171C]">{booking.customer?.name || "Customer"}</p>
-                          <p className="text-[11px] text-neutral-400">{booking.customer?.email || "No email"}</p>
+                          <p className="font-semibold text-[#1E2026]">{booking.customer?.name || "Customer"}</p>
+                          <p className="text-[11px] text-[#6B707E]">{booking.customer?.email || "No email"}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-neutral-600 font-medium">
-                      {booking.serviceDate ? new Date(booking.serviceDate).toLocaleDateString() : new Date(booking.createdAt).toLocaleDateString()}
+                    <td className="px-4 py-4 text-[#4A4E58] font-medium">
+                      <div>
+                        <p className="font-semibold text-[#1E2026]">
+                          {booking.bookingDate
+                            ? new Date(booking.bookingDate).toLocaleDateString("en-US", {
+                                weekday: "short",
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : booking.serviceDate
+                            ? new Date(booking.serviceDate).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : new Date(booking.createdAt).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                        </p>
+                        {booking.slot && (
+                          <span className="inline-flex items-center gap-1 mt-0.5 text-[11px] text-[#6B707E]">
+                            <Clock className="h-3 w-3 text-[#FF5A36]" />
+                            {booking.slot}
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-4 py-4 font-bold text-[#14171C]">
-                      ${booking.price || 50}
+                    <td className="px-4 py-4 font-extrabold text-[#1E2026]">
+                      ${booking.price ?? booking.technicianProfile?.basePrice ?? 50}
                     </td>
                     <td className="px-4 py-4">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
                           booking.status === "ACCEPTED"
-                            ? "bg-teal-50 text-[#0FA894]"
+                            ? "bg-teal-50 text-[#0FA894] border border-teal-100"
                             : booking.status === "COMPLETED"
-                            ? "bg-emerald-50 text-emerald-700"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
                             : booking.status === "DECLINED"
-                            ? "bg-rose-50 text-rose-700"
-                            : "bg-amber-50 text-amber-700"
+                            ? "bg-rose-50 text-rose-700 border border-rose-100"
+                            : "bg-amber-50 text-amber-700 border border-amber-100"
                         }`}
                       >
                         {booking.status}
@@ -421,7 +458,7 @@ export default function TechnicianDashboardPage() {
                         )}
 
                         {(booking.status === "COMPLETED" || booking.status === "DECLINED") && (
-                          <span className="text-[11px] text-neutral-400 italic">No action needed</span>
+                          <span className="text-[11px] text-[#9AA0AA] italic font-medium">Completed</span>
                         )}
                       </div>
                     </td>
@@ -434,11 +471,11 @@ export default function TechnicianDashboardPage() {
 
         {/* Server-Side Pagination Controls */}
         {meta.totalPage > 1 && (
-          <div className="mt-6 flex items-center justify-between border-t border-neutral-100 pt-4">
+          <div className="mt-6 flex items-center justify-between border-t border-[#E7E2D8] pt-4">
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage <= 1 || loading}
-              className="flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+              className="flex items-center gap-1 rounded-xl border border-[#E7E2D8] bg-white px-3 py-1.5 text-xs font-semibold text-[#1E2026] hover:bg-[#FFFBF3] disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
               Previous
@@ -452,7 +489,7 @@ export default function TechnicianDashboardPage() {
                   className={`h-7 w-7 rounded-lg text-xs font-bold ${
                     currentPage === i + 1
                       ? "bg-[#FF5A36] text-white"
-                      : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100"
+                      : "border border-[#E7E2D8] bg-white text-[#6B707E] hover:bg-[#FFFBF3]"
                   }`}
                 >
                   {i + 1}
@@ -463,7 +500,7 @@ export default function TechnicianDashboardPage() {
             <button
               onClick={() => setCurrentPage((p) => Math.min(p + 1, meta.totalPage))}
               disabled={currentPage >= meta.totalPage || loading}
-              className="flex items-center gap-1 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+              className="flex items-center gap-1 rounded-xl border border-[#E7E2D8] bg-white px-3 py-1.5 text-xs font-semibold text-[#1E2026] hover:bg-[#FFFBF3] disabled:opacity-40"
             >
               Next
               <ChevronRight className="h-4 w-4" />
