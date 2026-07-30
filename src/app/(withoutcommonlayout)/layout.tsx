@@ -33,26 +33,17 @@ type Role = "customer" | "technician" | "admin";
 const navByRole: Record<Role, { label: string; href: string; icon: typeof LayoutDashboard }[]> = {
   customer: [
     { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-    { label: "My bookings", href: "/dashboard/bookings", icon: CalendarCheck },
-    { label: "Find a technician", href: "/dashboard/find", icon: Search },
-    { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
-    { label: "Payments", href: "/dashboard/payments", icon: Wallet },
-    { label: "Settings", href: "/dashboard/settings", icon: Settings },
   ],
   technician: [
     { label: "Overview", href: "/technician-dashboard", icon: LayoutDashboard },
     { label: "Job requests", href: "/technician-dashboard/requests", icon: ClipboardList },
     { label: "My services", href: "/technician-dashboard/services", icon: Briefcase },
-    { label: "Schedule", href: "/technician-dashboard/schedule", icon: CalendarCheck },
-    { label: "Payouts", href: "/technician-dashboard/payouts", icon: Wallet },
-    { label: "Settings", href: "/technician-dashboard/settings", icon: Settings },
+    { label: "Profile", href: "/technician-dashboard/profile", icon: User },
   ],
   admin: [
     { label: "Overview", href: "/admin-dashboard", icon: LayoutDashboard },
     { label: "Manage Users", href: "/admin-dashboard/users", icon: User },
     { label: "Categories", href: "/admin-dashboard/categories", icon: Briefcase },
-    { label: "All Bookings", href: "/admin-dashboard/bookings", icon: CalendarCheck },
-    { label: "Settings", href: "/admin-dashboard/settings", icon: Settings },
   ],
 };
 
@@ -284,18 +275,18 @@ export default function DashboardLayout({
                     </p>
                   )}
                   <Link
-                    href="/dashboard/settings"
+                    href={
+                      activeRole === "technician"
+                        ? "/technician-dashboard/profile"
+                        : activeRole === "admin"
+                        ? "/admin-dashboard"
+                        : "/dashboard"
+                    }
+                    onClick={() => setUserMenuOpen(false)}
                     className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-[#4A4E58] hover:bg-[#FFF6EA]"
                   >
                     <User className="h-3.5 w-3.5" />
                     Profile
-                  </Link>
-                  <Link
-                    href="/dashboard/settings"
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-[#4A4E58] hover:bg-[#FFF6EA]"
-                  >
-                    <Settings className="h-3.5 w-3.5" />
-                    Settings
                   </Link>
                   <div className="my-1 h-px bg-[#E7E2D8]" />
                   <button

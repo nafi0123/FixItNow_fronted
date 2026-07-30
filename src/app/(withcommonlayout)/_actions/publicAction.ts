@@ -53,9 +53,11 @@ export interface TechnicianProfile {
     skills: string[];
     experienceYears?: number;
     hourlyRate?: number;
+    basePrice?: number;
     location?: string | null;
     rating: number;
-    isAvailable: boolean;
+    isAvailable?: boolean;
+    availability?: any;
     user: {
         name: string;
         email: string;

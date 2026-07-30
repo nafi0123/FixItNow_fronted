@@ -167,10 +167,7 @@ export const getMeAction = async () => {
                 "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json"
             },
-            next: {
-                revalidate: 60 * 60,
-                tags: ["user-me"]
-            }
+            cache: "no-store",
         });
 
         const result = await res.json();

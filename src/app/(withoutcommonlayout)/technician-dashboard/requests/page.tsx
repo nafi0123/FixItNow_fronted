@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ClipboardList, CheckCircle2, Clock, AlertCircle, ChevronLeft, ChevronRight, SearchX, User } from "lucide-react";
+import { ClipboardList, ChevronLeft, ChevronRight, SearchX, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { getTechnicianBookingsAction, updateTechnicianBookingStatusAction } from "../_actions/technicianActions";
 
@@ -25,22 +25,37 @@ interface MetaData {
   totalPage: number;
 }
 
-const INK = "#14171C";
 const CORAL = "#FF5A36";
 const CORAL_DARK = "#C23B1F";
-const TEAL = "#0FA894";
 
 export default function TechnicianRequestsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [meta, setMeta] = useState<MetaData>({ page: 1, limit: 10, total: 0, totalPage: 1 });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const fetchBookings = async () => {
     setLoading(true);
-    const res = await getTechnicianBookingsAction({ page, limit });
+    const res = await getTechnicianBookingsAction({
+      page,
+      limit,
+      search: debouncedSearch,
+    });
+
     if (res && res.success) {
       setBookings(res.data || []);
       if (res.meta) setMeta(res.meta);
@@ -53,7 +68,7 @@ export default function TechnicianRequestsPage() {
 
   useEffect(() => {
     fetchBookings();
-  }, [page, limit]);
+  }, [page, limit, debouncedSearch]);
 
   const handleStatusUpdate = async (bookingId: string, status: "ACCEPTED" | "DECLINED" | "COMPLETED") => {
     setActionLoading(bookingId);
@@ -89,11 +104,24 @@ export default function TechnicianRequestsPage() {
 
       {/* Control Bar */}
       <div className="flex flex-col gap-4 rounded-2xl border border-[#E7E2D8] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 text-xs text-[#6B707E]">
-          <span className="font-semibold text-[#1E2026]">All Assigned Bookings</span>
-          <span className="rounded-full bg-[#FFFBF3] px-2.5 py-0.5 font-bold text-[#FF5A36] border border-[#E7E2D8]">
-            {meta.total} total
-          </span>
+        <div className="group relative flex w-full items-center gap-2.5 rounded-xl border border-[#E7E2D8] bg-white px-3.5 py-2.5 shadow-sm transition-all focus-within:border-[#FF5A36] focus-within:ring-4 focus-within:ring-[#FF5A36]/10 sm:w-80">
+          <Search className="h-4 w-4 shrink-0 text-[#9AA0AA] transition-colors group-focus-within:text-[#FF5A36]" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by customer or email..."
+            className="w-full bg-transparent text-xs font-medium text-[#1E2026] outline-none placeholder:text-[#9AA0AA]"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#F1EEE6] text-[#6B707E] transition-colors hover:bg-[#FF5A36] hover:text-white"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-3">

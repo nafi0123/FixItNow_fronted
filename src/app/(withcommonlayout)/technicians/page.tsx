@@ -244,7 +244,7 @@ function TechniciansContent() {
                     <div>
                       <span className="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">Hourly Rate</span>
                       <p className="text-lg font-extrabold text-[#14171C]">
-                        ${tech.hourlyRate || 35}<span className="text-xs font-normal text-neutral-500">/hr</span>
+                        ${tech.basePrice || tech.hourlyRate || 35}<span className="text-xs font-normal text-neutral-500">/hr</span>
                       </p>
                     </div>
 

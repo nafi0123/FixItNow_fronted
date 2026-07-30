@@ -76,6 +76,7 @@ export const updateTechnicianAvailabilityAction = async (payload: UpdateAvailabi
     const result = await res.json();
     if (result.success) {
       try { (revalidateTag as any)("technician-availability"); } catch {}
+      try { (revalidateTag as any)("user-me"); } catch {}
     }
     return result;
   } catch (error) {
@@ -158,13 +159,14 @@ export const deleteTechnicianServiceAction = async (serviceId: string) => {
   }
 };
 
-export const getTechnicianBookingsAction = async (params?: { page?: number; limit?: number }) => {
+export const getTechnicianBookingsAction = async (params?: { page?: number; limit?: number; search?: string }) => {
   const token = await getAuthToken();
   if (!token) return { success: false, data: [] };
 
   const query = new URLSearchParams();
   if (params?.page) query.append("page", String(params.page));
   if (params?.limit) query.append("limit", String(params.limit));
+  if (params?.search) query.append("search", params.search);
 
   try {
     const res = await fetch(`${getBackendUrl()}/api/technician/bookings?${query.toString()}`, {

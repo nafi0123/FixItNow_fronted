@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { Star, MapPin, Award, CheckCircle2, Clock, Calendar, MessageSquare, ArrowLeft, ShieldCheck, Wrench, UserCheck } from "lucide-react";
+import { Star, MapPin, Award, CheckCircle2, Clock, Calendar, MessageSquare, ArrowLeft, ShieldCheck, Wrench, AlertCircle } from "lucide-react";
 import { getSingleTechnicianAction, getPublicCategoriesAction, TechnicianProfile, Category } from "../../_actions/publicAction";
 
 const CORAL = "#FF5A36";
@@ -51,6 +51,23 @@ export default function SingleTechnicianPage({ params }: PageProps) {
     if (/^[0-9a-fA-F-]{36}$/.test(skill)) return "Specialized Service";
     return skill;
   };
+
+  const isTechAvailable = (() => {
+    if (!technician) return true;
+    if (typeof technician.isAvailable === "boolean") return technician.isAvailable;
+    if (technician.availability) {
+      if (typeof technician.availability === "boolean") return technician.availability;
+      if (typeof technician.availability === "object" && technician.availability !== null) {
+        if (typeof technician.availability.isAvailable === "boolean") {
+          return technician.availability.isAvailable;
+        }
+      }
+    }
+    return true;
+  })();
+
+  const workingHours = technician?.availability?.workingHours || null;
+  const workingDays = Array.isArray(technician?.availability?.workingDays) ? technician.availability.workingDays : null;
 
   if (loading) {
     return (
@@ -117,10 +134,18 @@ export default function SingleTechnicianPage({ params }: PageProps) {
                     <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                     {technician.rating && Number(technician.rating) > 0 ? Number(technician.rating).toFixed(1) : "New"}
                   </div>
-                  <span className="rounded-2xl bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Available Now
-                  </span>
+
+                  {isTechAvailable ? (
+                    <span className="rounded-2xl bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 flex items-center gap-1 border border-emerald-100">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Available Now
+                    </span>
+                  ) : (
+                    <span className="rounded-2xl bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 flex items-center gap-1 border border-rose-100">
+                      <Clock className="h-3.5 w-3.5 text-rose-600" />
+                      Currently Offline / Busy
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -131,6 +156,30 @@ export default function SingleTechnicianPage({ params }: PageProps) {
                   {technician.bio || "Professional technician specializing in diagnostics, repairs, preventive maintenance, and installations."}
                 </p>
               </div>
+
+              {/* Work Schedule Details */}
+              {(workingHours || (workingDays && workingDays.length > 0)) && (
+                <div className="mt-6 border-t border-neutral-100 pt-6">
+                  <h3 className="text-sm font-bold text-[#14171C] flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-[#FF5A36]" />
+                    Working Schedule & Hours
+                  </h3>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
+                    {workingHours && (
+                      <div className="rounded-xl border border-neutral-200 bg-[#FFFBF3] p-3">
+                        <span className="font-semibold text-[#14171C] block mb-1">Active Hours:</span>
+                        <span>{workingHours}</span>
+                      </div>
+                    )}
+                    {workingDays && workingDays.length > 0 && (
+                      <div className="rounded-xl border border-neutral-200 bg-[#FFFBF3] p-3">
+                        <span className="font-semibold text-[#14171C] block mb-1">Working Days:</span>
+                        <span>{workingDays.join(", ")}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Skills list */}
               {technician.skills && technician.skills.length > 0 && (
@@ -206,7 +255,7 @@ export default function SingleTechnicianPage({ params }: PageProps) {
               <span className="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">Standard Rate</span>
               <div className="mt-1 flex items-baseline gap-1">
                 <span className="text-3xl font-extrabold text-[#14171C]">
-                  ${technician.hourlyRate || 35}
+                  ${technician.basePrice || technician.hourlyRate || 35}
                 </span>
                 <span className="text-xs font-medium text-neutral-500">/ hour</span>
               </div>
@@ -238,9 +287,14 @@ export default function SingleTechnicianPage({ params }: PageProps) {
               ) : (
                 <button
                   onClick={() => setBookingSuccess(true)}
-                  className="mt-6 w-full rounded-2xl bg-[#FF5A36] py-3 text-xs font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#C23B1F] active:scale-95"
+                  disabled={!isTechAvailable}
+                  className={`mt-6 w-full rounded-2xl py-3 text-xs font-bold text-white shadow-lg transition-all active:scale-95 ${
+                    isTechAvailable
+                      ? "bg-[#FF5A36] shadow-orange-500/20 hover:bg-[#C23B1F]"
+                      : "bg-neutral-400 cursor-not-allowed opacity-60"
+                  }`}
                 >
-                  Book This Technician Now
+                  {isTechAvailable ? "Book This Technician Now" : "Technician Currently Offline"}
                 </button>
               )}
             </div>
