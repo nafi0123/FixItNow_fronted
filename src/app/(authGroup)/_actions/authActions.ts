@@ -139,3 +139,22 @@ export const registerAction = async (prevState: RegisterState, formData: FormDat
 
     return result;
 }
+
+export const logoutAction = async () => {
+    const cookieStore = await cookies();
+    cookieStore.delete("accessToken");
+    cookieStore.delete("refreshToken");
+    redirect("/login");
+}
+
+export const getCurrentUser = async () => {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("accessToken")?.value;
+    if (!token) return null;
+    try {
+        const decoded = jwt.decode(token) as JwtPayload;
+        return decoded;
+    } catch {
+        return null;
+    }
+}
