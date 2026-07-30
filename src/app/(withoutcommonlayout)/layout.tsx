@@ -50,6 +50,7 @@ const navByRole: Record<Role, { label: string; href: string; icon: typeof Layout
   admin: [
     { label: "Overview", href: "/admin-dashboard", icon: LayoutDashboard },
     { label: "Manage Users", href: "/admin-dashboard/users", icon: User },
+    { label: "Categories", href: "/admin-dashboard/categories", icon: Briefcase },
     { label: "All Bookings", href: "/admin-dashboard/bookings", icon: CalendarCheck },
     { label: "Settings", href: "/admin-dashboard/settings", icon: Settings },
   ],

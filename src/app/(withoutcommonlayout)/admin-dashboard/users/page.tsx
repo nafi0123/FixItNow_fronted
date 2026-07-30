@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Users,
   SearchX,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 import { getAllUsersAdminAction, updateUserStatusAction } from "../_actions/adminAction"
@@ -143,15 +144,24 @@ export default function AdminUsersPage() {
       {/* Control Bar: Search & Filters */}
       <div className="flex flex-col gap-4 rounded-2xl border border-[#E7E2D8] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
         {/* Search */}
-        <div className="flex items-center gap-2 overflow-hidden rounded-xl border border-[#E7E2D8] bg-[#FFFBF3] px-3 py-2 transition-colors focus-within:border-[#FF5A36] sm:w-80">
-          <Search className="h-4 w-4 shrink-0 text-[#9AA0AA]" />
+        <div className="group relative flex w-full items-center gap-2.5 rounded-xl border border-[#E7E2D8] bg-white px-3.5 py-2.5 shadow-sm transition-all focus-within:border-[#FF5A36] focus-within:ring-4 focus-within:ring-[#FF5A36]/10 sm:w-80">
+          <Search className="h-4 w-4 shrink-0 text-[#9AA0AA] transition-colors group-focus-within:text-[#FF5A36]" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or email..."
-            className="w-full bg-transparent text-xs text-[#1E2026] outline-none placeholder:text-[#9AA0AA]"
+            className="w-full bg-transparent text-xs font-medium text-[#1E2026] outline-none placeholder:text-[#9AA0AA]"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#F1EEE6] text-[#6B707E] transition-colors hover:bg-[#FF5A36] hover:text-white"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </div>
 
         {/* Role Filter & Limit */}
