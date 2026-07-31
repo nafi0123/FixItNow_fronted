@@ -126,3 +126,35 @@ export const getBookingDetailsAction = async (bookingId: string) => {
     };
   }
 };
+
+export const initiatePaymentAction = async (bookingId: string) => {
+  const token = await getAuthToken();
+  if (!token) {
+    return {
+      success: false,
+      statusCode: 401,
+      message: "Unauthorized! Please log in as a customer.",
+    };
+  }
+
+  try {
+    const res = await fetch(`${getBackendUrl()}/api/payments/create`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ bookingId }),
+      cache: "no-store",
+    });
+
+    return await res.json();
+  } catch (error) {
+    console.error("initiatePaymentAction error:", error);
+    return {
+      success: false,
+      statusCode: 500,
+      message: "Failed to initiate payment session.",
+    };
+  }
+};

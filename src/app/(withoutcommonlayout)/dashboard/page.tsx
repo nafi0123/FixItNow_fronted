@@ -17,9 +17,14 @@ import {
   ChevronRight,
   X,
   SearchX,
-  Plus
+  Plus,
+  Eye,
+  CreditCard,
+  Loader2,
+  User
 } from "lucide-react";
-import { getUserBookingsAction } from "../../(withcommonlayout)/_actions/bookingAction";
+import { toast } from "sonner";
+import { getUserBookingsAction, getBookingDetailsAction, initiatePaymentAction } from "../../(withcommonlayout)/_actions/bookingAction";
 import { getMeAction } from "../../(authGroup)/_actions/authActions";
 
 interface Booking {
@@ -28,13 +33,17 @@ interface Booking {
   bookingDate: string;
   slot: string;
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "COMPLETED";
+  paymentStatus?: string;
+  price?: number;
   createdAt: string;
   technicianProfile?: {
+    basePrice?: number;
+    hourlyRate?: number;
+    location?: string;
     user?: {
       name: string;
       email: string;
     };
-    location?: string;
   };
 }
 
@@ -53,6 +62,9 @@ export default function CustomerDashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [meta, setMeta] = useState<MetaData>({ page: 1, limit: 10, total: 0, totalPage: 1 });
   const [loading, setLoading] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
+  const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
 
   // Pagination & Filtering state
   const [search, setSearch] = useState("");
@@ -99,6 +111,29 @@ export default function CustomerDashboardPage() {
   useEffect(() => {
     loadData();
   }, [page, limit, debouncedSearch, filterStatus]);
+
+  const handleViewDetails = async (bookingId: string) => {
+    setLoadingDetails(true);
+    const res = await getBookingDetailsAction(bookingId);
+    if (res && res.success && res.data) {
+      setSelectedBooking(res.data);
+    } else {
+      toast.error(res?.message || "Failed to fetch booking details.");
+    }
+    setLoadingDetails(false);
+  };
+
+  const handlePayNow = async (bookingId: string) => {
+    setPayingBookingId(bookingId);
+    const res = await initiatePaymentAction(bookingId);
+    if (res && res.success && res.data?.paymentUrl) {
+      toast.success("Redirecting to SSLCommerz payment gateway...");
+      window.location.href = res.data.paymentUrl;
+    } else {
+      toast.error(res?.message || "Failed to create payment session.");
+      setPayingBookingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -198,8 +233,9 @@ export default function CustomerDashboardPage() {
                 <th className="px-6 py-4">Technician</th>
                 <th className="px-6 py-4">Booking Date</th>
                 <th className="px-6 py-4">Time Slot</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Created At</th>
+                <th className="px-6 py-4">Booking Status</th>
+                <th className="px-6 py-4">Payment</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E2D8]">
@@ -292,12 +328,44 @@ export default function CustomerDashboardPage() {
                           {booking.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right text-[11px] text-[#6B707E]">
-                        {new Date(booking.createdAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                            booking.paymentStatus === "PAID"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                              : "bg-amber-50 text-amber-700 border border-amber-100"
+                          }`}
+                        >
+                          {booking.paymentStatus || "UNPAID"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleViewDetails(booking.id)}
+                            title="View Booking Details"
+                            className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#E7E2D8] bg-white text-[#6B707E] transition-all hover:border-[#FF5A36] hover:bg-[#FFFBF3] hover:text-[#FF5A36]"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+
+                          {booking.status === "ACCEPTED" && booking.paymentStatus !== "PAID" && (
+                            <button
+                              type="button"
+                              onClick={() => handlePayNow(booking.id)}
+                              disabled={payingBookingId === booking.id}
+                              className="flex items-center gap-1.5 rounded-xl bg-[#0FA894] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#0d8f7e] transition-all disabled:opacity-50"
+                            >
+                              {payingBookingId === booking.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <CreditCard className="h-3.5 w-3.5" />
+                              )}
+                              Pay Now
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -344,6 +412,138 @@ export default function CustomerDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Booking Details View Modal */}
+      {selectedBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-[#E7E2D8] space-y-5">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#E7E2D8] pb-3.5">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FF5A36]/10 text-[#FF5A36]">
+                  <Eye className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className="text-base font-extrabold text-[#1E2026]">Booking Details</h2>
+                  <p className="text-[11px] text-[#6B707E] font-mono">ID: {selectedBooking.id}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedBooking(null)}
+                className="rounded-full p-1.5 text-[#9AA0AA] hover:bg-[#FFFBF3] hover:text-[#1E2026] transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Details Content */}
+            <div className="space-y-3.5 text-xs">
+              {/* Technician Info Box */}
+              <div className="rounded-2xl bg-[#FFFBF3] border border-[#E7E2D8] p-3.5 space-y-2">
+                <p className="font-extrabold text-[#1E2026] text-xs flex items-center gap-2">
+                  <Wrench className="h-4 w-4 text-[#FF5A36]" />
+                  Technician Information
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1 text-[#1E2026]">
+                  <div>
+                    <span className="text-[#6B707E] block text-[11px]">Name</span>
+                    <span className="font-semibold">{selectedBooking.technicianProfile?.user?.name || "Technician"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#6B707E] block text-[11px]">Email</span>
+                    <span className="font-semibold">{selectedBooking.technicianProfile?.user?.email || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Schedule & Financials */}
+              <div className="rounded-2xl border border-[#E7E2D8] bg-white p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#6B707E]">Booking Date:</span>
+                  <span className="font-bold text-[#1E2026]">
+                    {selectedBooking.bookingDate
+                      ? new Date(selectedBooking.bookingDate).toLocaleDateString("en-US", {
+                          weekday: "short",
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })
+                      : "N/A"}
+                  </span>
+                </div>
+
+                {selectedBooking.slot && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#6B707E]">Time Slot:</span>
+                    <span className="font-bold text-[#FF5A36] bg-[#FF5A36]/10 px-2.5 py-0.5 rounded-lg text-[11px]">
+                      {selectedBooking.slot}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[#6B707E]">Service Rate:</span>
+                  <span className="font-extrabold text-sm text-[#1E2026]">
+                    ${selectedBooking.price ?? selectedBooking.technicianProfile?.basePrice ?? selectedBooking.technicianProfile?.hourlyRate ?? 50}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[#6B707E]">Payment Status:</span>
+                  <span className="font-bold uppercase text-[10px] px-2 py-0.5 rounded bg-neutral-100 text-neutral-700">
+                    {selectedBooking.paymentStatus || "UNPAID"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-[#E7E2D8] pt-2">
+                  <span className="text-[#6B707E]">Booking Status:</span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                      selectedBooking.status === "ACCEPTED"
+                        ? "bg-teal-50 text-[#0FA894] border border-teal-100"
+                        : selectedBooking.status === "COMPLETED"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                        : selectedBooking.status === "DECLINED"
+                        ? "bg-rose-50 text-rose-700 border border-rose-100"
+                        : "bg-amber-50 text-amber-700 border border-amber-100"
+                    }`}
+                  >
+                    {selectedBooking.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 border-t border-[#E7E2D8] pt-3">
+              {selectedBooking.status === "ACCEPTED" && selectedBooking.paymentStatus !== "PAID" && (
+                <button
+                  type="button"
+                  onClick={() => handlePayNow(selectedBooking.id)}
+                  disabled={payingBookingId === selectedBooking.id}
+                  className="flex items-center gap-1.5 rounded-xl bg-[#0FA894] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#0d8f7e] transition-colors disabled:opacity-50"
+                >
+                  {payingBookingId === selectedBooking.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4" />
+                  )}
+                  Pay Now
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setSelectedBooking(null)}
+                className="rounded-xl border border-[#E7E2D8] bg-white px-3.5 py-2 text-xs font-bold text-[#6B707E] hover:bg-[#FFFBF3] transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

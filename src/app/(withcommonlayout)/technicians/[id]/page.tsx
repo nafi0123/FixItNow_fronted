@@ -28,13 +28,60 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const DEFAULT_SLOTS = [
-  "09:00 AM - 11:00 AM",
-  "11:00 AM - 01:00 PM",
-  "02:00 PM - 04:00 PM",
-  "04:00 PM - 06:00 PM",
-  "06:00 PM - 08:00 PM"
-];
+function parseTimeString(timeStr: string): number | null {
+  if (!timeStr) return null;
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+
+  if (period === "PM" && hours < 12) hours += 12;
+  if (period === "AM" && hours === 12) hours = 0;
+
+  return hours * 60 + minutes;
+}
+
+function formatMinutesToTimeStr(totalMinutes: number): string {
+  let hours = Math.floor(totalMinutes / 60) % 24;
+  const minutes = totalMinutes % 60;
+  const period = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(hours)}:${pad(minutes)} ${period}`;
+}
+
+function generateSlotsFromWorkingHours(workingHoursStr?: string | null): string[] {
+  const defaultHours = "09:00 AM - 06:00 PM";
+  const hoursToParse = (workingHoursStr && workingHoursStr.includes("-")) ? workingHoursStr : defaultHours;
+
+  const parts = hoursToParse.split("-");
+  let startMinutes = parseTimeString(parts[0]);
+  let endMinutes = parseTimeString(parts[1]);
+
+  if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+    startMinutes = 540; // 09:00 AM
+    endMinutes = 1080;  // 06:00 PM
+  }
+
+  const slots: string[] = [];
+  let current = startMinutes;
+  const slotDuration = 120; // 2 hours
+
+  while (current < endMinutes) {
+    let next = current + slotDuration;
+    if (next > endMinutes) {
+      next = endMinutes;
+    }
+    if (next - current >= 30) {
+      slots.push(`${formatMinutesToTimeStr(current)} - ${formatMinutesToTimeStr(next)}`);
+    }
+    current = next;
+  }
+
+  return slots;
+}
 
 export default function SingleTechnicianPage({ params }: PageProps) {
   const resolvedParams = use(params);
@@ -56,7 +103,7 @@ export default function SingleTechnicianPage({ params }: PageProps) {
   // Form State
   const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
   const [bookingDate, setBookingDate] = useState(tomorrowStr);
-  const [bookingSlot, setBookingSlot] = useState(DEFAULT_SLOTS[0]);
+  const [bookingSlot, setBookingSlot] = useState("");
   const [customSlot, setCustomSlot] = useState("");
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
   const [selectedServicePrice, setSelectedServicePrice] = useState<number>(35);
@@ -136,6 +183,8 @@ export default function SingleTechnicianPage({ params }: PageProps) {
 
   const workingHours = technician?.availability?.workingHours || null;
   const workingDays = Array.isArray(technician?.availability?.workingDays) ? technician.availability.workingDays : null;
+  const availableSlots = generateSlotsFromWorkingHours(workingHours);
+  const activeSelectedSlot = customSlot ? "" : (bookingSlot || availableSlots[0] || "");
 
   const handleBookNowClick = async () => {
     setBookingLoading(true);
@@ -171,7 +220,7 @@ export default function SingleTechnicianPage({ params }: PageProps) {
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const selectedSlot = customSlot.trim() !== "" ? customSlot.trim() : bookingSlot;
+    const selectedSlot = customSlot.trim() !== "" ? customSlot.trim() : (bookingSlot || availableSlots[0] || "");
     if (!bookingDate) {
       toast.error("Please select a valid booking date.");
       return;
@@ -588,7 +637,7 @@ export default function SingleTechnicianPage({ params }: PageProps) {
                   Select Preferred Time Slot
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {DEFAULT_SLOTS.map((slot) => (
+                  {availableSlots.map((slot) => (
                     <button
                       type="button"
                       key={slot}
@@ -597,13 +646,13 @@ export default function SingleTechnicianPage({ params }: PageProps) {
                         setCustomSlot("");
                       }}
                       className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all text-left flex items-center justify-between ${
-                        bookingSlot === slot && !customSlot
+                        activeSelectedSlot === slot
                           ? "border-[#FF5A36] bg-[#FF5A36]/10 text-[#FF5A36] shadow-sm"
                           : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
                       }`}
                     >
                       <span>{slot}</span>
-                      {bookingSlot === slot && !customSlot && (
+                      {activeSelectedSlot === slot && (
                         <CheckCircle2 className="h-3.5 w-3.5 text-[#FF5A36]" />
                       )}
                     </button>
@@ -634,7 +683,7 @@ export default function SingleTechnicianPage({ params }: PageProps) {
                 </div>
                 <div className="flex justify-between text-neutral-600">
                   <span>Time Slot</span>
-                  <span className="font-semibold text-[#14171C]">{customSlot || bookingSlot}</span>
+                  <span className="font-semibold text-[#14171C]">{customSlot || bookingSlot || availableSlots[0] || ""}</span>
                 </div>
                 <div className="border-t border-neutral-200 pt-2 flex justify-between font-bold text-sm text-[#14171C]">
                   <span>Initial Status</span>
