@@ -11,8 +11,8 @@
 
 ## 🚀 Live Demo & Deployment
 
-- **Frontend Live URL:** [https://fix-it-now-brown.vercel.app](https://fix-it-now-brown.vercel.app)
-- **Backend API URL:** [https://fix-it-2s3255rfv-nafi-mahmud-bukharis-projects.vercel.app](https://fix-it-2s3255rfv-nafi-mahmud-bukharis-projects.vercel.app)
+- **Frontend Live URL:** [https://frontend-five-sand-57.vercel.app](https://frontend-five-sand-57.vercel.app)
+- **Backend API URL:** [https://fix-it-now-brown.vercel.app](https://fix-it-now-brown.vercel.app)
 
 ---
 
