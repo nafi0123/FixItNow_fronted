@@ -136,7 +136,7 @@ export const getSingleTechnicianAction = async (id: string) => {
         const res = await fetch(`${getBackendUrl()}/api/technicians/${id}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            next: { revalidate: 60, tags: [`public-technician-${id}`] }
+            cache: "no-store",
         });
         return await res.json();
     } catch (error) {

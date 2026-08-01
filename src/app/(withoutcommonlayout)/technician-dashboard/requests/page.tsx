@@ -296,13 +296,20 @@ export default function TechnicianRequestsPage() {
                         )}
 
                         {booking.status === "ACCEPTED" && (
-                          <button
-                            onClick={() => handleStatusUpdate(booking.id, "COMPLETED")}
-                            disabled={actionLoading === booking.id}
-                            className="rounded-xl bg-emerald-600 px-3 py-1.5 font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
-                          >
-                            Mark Completed
-                          </button>
+                          (booking.paymentStatus === "PAID" || booking.paymentStatus === "paid") ? (
+                            <button
+                              onClick={() => handleStatusUpdate(booking.id, "COMPLETED")}
+                              disabled={actionLoading === booking.id}
+                              className="rounded-xl bg-emerald-600 px-3 py-1.5 font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"
+                            >
+                              Mark Completed
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-xl bg-amber-50 border border-amber-200 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+                              <Clock className="h-3 w-3 text-amber-500" />
+                              Awaiting Payment
+                            </span>
+                          )
                         )}
 
                         {(booking.status === "COMPLETED" || booking.status === "DECLINED") && (
@@ -497,17 +504,23 @@ export default function TechnicianRequestsPage() {
               )}
 
               {selectedBooking.status === "ACCEPTED" && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await handleStatusUpdate(selectedBooking.id, "COMPLETED");
-                    setSelectedBooking((prev) => prev ? { ...prev, status: "COMPLETED" } : null);
-                  }}
-                  disabled={actionLoading === selectedBooking.id}
-                  className="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50"
-                >
-                  Mark Completed
-                </button>
+                (selectedBooking.paymentStatus === "PAID" || selectedBooking.paymentStatus === "paid") ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await handleStatusUpdate(selectedBooking.id, "COMPLETED");
+                      setSelectedBooking((prev) => prev ? { ...prev, status: "COMPLETED" } : null);
+                    }}
+                    disabled={actionLoading === selectedBooking.id}
+                    className="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                  >
+                    Mark Completed
+                  </button>
+                ) : (
+                  <span className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700">
+                    Awaiting Customer Payment
+                  </span>
+                )
               )}
 
               <button

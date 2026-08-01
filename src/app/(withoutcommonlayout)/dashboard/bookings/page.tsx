@@ -21,11 +21,12 @@ import {
   Eye,
   CreditCard,
   Loader2,
-  User
+  User,
+  Star
 } from "lucide-react";
 import { toast } from "sonner";
 import { getMeAction } from "@/src/app/(authGroup)/_actions/authActions";
-import { getUserBookingsAction, initiatePaymentAction } from "@/src/app/(withcommonlayout)/_actions/bookingAction";
+import { getUserBookingsAction, initiatePaymentAction, getBookingDetailsAction, createReviewAction } from "@/src/app/(withcommonlayout)/_actions/bookingAction";
 
 interface Booking {
   id: string;
@@ -36,6 +37,11 @@ interface Booking {
   paymentStatus?: string;
   price?: number;
   createdAt: string;
+  review?: {
+    id?: string;
+    rating: number;
+    comment?: string;
+  } | null;
   technicianProfile?: {
     basePrice?: number;
     hourlyRate?: number;
@@ -65,6 +71,13 @@ export default function CustomerDashboardPage() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
+
+  // Review modal state
+  const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
+  const [rating, setRating] = useState<number>(5);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [comment, setComment] = useState<string>("");
+  const [submittingReview, setSubmittingReview] = useState<boolean>(false);
 
   // Pagination & Filtering state
   const [search, setSearch] = useState("");
@@ -133,6 +146,30 @@ export default function CustomerDashboardPage() {
       toast.error(res?.message || "Failed to create payment session.");
       setPayingBookingId(null);
     }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewBooking) return;
+
+    setSubmittingReview(true);
+    const res = await createReviewAction({
+      bookingId: reviewBooking.id,
+      technicianProfileId: reviewBooking.technicianProfileId,
+      rating,
+      comment: comment.trim(),
+    });
+
+    if (res && res.success) {
+      toast.success(res.message || "Review submitted successfully!");
+      setReviewBooking(null);
+      setComment("");
+      setRating(5);
+      await loadData();
+    } else {
+      toast.error(res?.message || "Failed to submit review.");
+    }
+    setSubmittingReview(false);
   };
 
   return (
@@ -365,6 +402,28 @@ export default function CustomerDashboardPage() {
                               Pay Now
                             </button>
                           )}
+
+                          {booking.status === "COMPLETED" && (
+                            booking.review ? (
+                              <span className="inline-flex items-center gap-1 rounded-xl bg-amber-50 border border-amber-200 px-2.5 py-1 text-[11px] font-bold text-amber-700">
+                                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                Reviewed ({booking.review.rating}/5)
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReviewBooking(booking);
+                                  setRating(5);
+                                  setComment("");
+                                }}
+                                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF5A36] to-[#C23B1F] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:opacity-90 transition-all"
+                              >
+                                <Star className="h-3.5 w-3.5 fill-white" />
+                                Leave Review
+                              </button>
+                            )
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -533,6 +592,29 @@ export default function CustomerDashboardPage() {
                 </button>
               )}
 
+              {selectedBooking.status === "COMPLETED" && (
+                selectedBooking.review ? (
+                  <span className="inline-flex items-center gap-1 rounded-xl bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-bold text-amber-700">
+                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                    Reviewed ({selectedBooking.review.rating}/5)
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReviewBooking(selectedBooking);
+                      setSelectedBooking(null);
+                      setRating(5);
+                      setComment("");
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF5A36] to-[#C23B1F] px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-90 transition-all"
+                  >
+                    <Star className="h-4 w-4 fill-white" />
+                    Leave Review
+                  </button>
+                )
+              )}
+
               <button
                 type="button"
                 onClick={() => setSelectedBooking(null)}
@@ -541,6 +623,106 @@ export default function CustomerDashboardPage() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review & Rating Modal */}
+      {reviewBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-[#E7E2D8] space-y-5">
+            <div className="flex items-center justify-between border-b border-[#E7E2D8] pb-3.5">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FF5A36]/10 text-[#FF5A36]">
+                  <Star className="h-5 w-5 fill-[#FF5A36]" />
+                </span>
+                <div>
+                  <h2 className="text-base font-extrabold text-[#1E2026]">Rate &amp; Review Technician</h2>
+                  <p className="text-[11px] text-[#6B707E]">
+                    {reviewBooking.technicianProfile?.user?.name || "Technician Service"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReviewBooking(null)}
+                className="rounded-full p-1.5 text-[#9AA0AA] hover:bg-[#FFFBF3] hover:text-[#1E2026] transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitReview} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-xs font-bold text-[#1E2026]">
+                  Select Rating (1 to 5 Stars)
+                </label>
+                <div className="flex items-center justify-center gap-2 rounded-2xl bg-[#FFFBF3] border border-[#E7E2D8] p-4">
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const active = star <= (hoverRating || rating);
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        onClick={() => setRating(star)}
+                        className="p-1 transition-transform hover:scale-110 focus:outline-none"
+                      >
+                        <Star
+                          className={`h-7 w-7 transition-colors ${
+                            active ? "fill-amber-400 text-amber-400" : "text-neutral-300"
+                          }`}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-center text-xs font-semibold text-[#FF5A36]">
+                  {rating === 5
+                    ? "⭐⭐⭐⭐⭐ Excellent!"
+                    : rating === 4
+                    ? "⭐⭐⭐⭐ Very Good"
+                    : rating === 3
+                    ? "⭐⭐⭐ Good"
+                    : rating === 2
+                    ? "⭐⭐ Fair"
+                    : "⭐ Poor"}
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="review-comment" className="mb-1.5 block text-xs font-bold text-[#1E2026]">
+                  Write Feedback / Review
+                </label>
+                <textarea
+                  id="review-comment"
+                  rows={3}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Describe your experience with this technician..."
+                  className="w-full rounded-2xl border border-[#E7E2D8] bg-white p-3 text-xs text-[#1E2026] outline-none transition-colors focus:border-[#FF5A36] placeholder:text-[#9AA0AA]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-[#E7E2D8] pt-3">
+                <button
+                  type="button"
+                  onClick={() => setReviewBooking(null)}
+                  className="rounded-xl border border-[#E7E2D8] bg-white px-4 py-2 text-xs font-bold text-[#6B707E] hover:bg-[#FFFBF3] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF5A36] to-[#C23B1F] px-5 py-2 text-xs font-bold text-white shadow-md shadow-[#FF5A36]/20 transition-all hover:opacity-95 disabled:opacity-50"
+                >
+                  {submittingReview && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Submit Review
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

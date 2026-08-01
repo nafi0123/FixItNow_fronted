@@ -158,3 +158,46 @@ export const initiatePaymentAction = async (bookingId: string) => {
     };
   }
 };
+
+export interface CreateReviewPayload {
+  bookingId: string;
+  technicianProfileId: string;
+  rating: number;
+  comment?: string;
+}
+
+export const createReviewAction = async (payload: CreateReviewPayload) => {
+  const token = await getAuthToken();
+  if (!token) {
+    return {
+      success: false,
+      statusCode: 401,
+      message: "Unauthorized! Please log in as a customer.",
+    };
+  }
+
+  try {
+    const res = await fetch(`${getBackendUrl()}/api/reviews`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+
+    const result = await res.json();
+    if (result && result.success) {
+      try { (revalidateTag as any)("customer-bookings"); } catch {}
+    }
+    return result;
+  } catch (error) {
+    console.error("createReviewAction error:", error);
+    return {
+      success: false,
+      statusCode: 500,
+      message: "Failed to submit review.",
+    };
+  }
+};
