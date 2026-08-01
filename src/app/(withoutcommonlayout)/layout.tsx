@@ -34,17 +34,20 @@ const navByRole: Record<Role, { label: string; href: string; icon: typeof Layout
   customer: [
     { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
     { label: "My Bookings", href: "/dashboard/bookings", icon: CalendarCheck },
+    { label: "Payments", href: "/dashboard/payments", icon: Wallet },
   ],
   technician: [
     { label: "Overview", href: "/technician-dashboard", icon: LayoutDashboard },
     { label: "Job requests", href: "/technician-dashboard/requests", icon: ClipboardList },
     { label: "My services", href: "/technician-dashboard/services", icon: Briefcase },
+    { label: "Payments", href: "/technician-dashboard/payments", icon: Wallet },
     { label: "Profile", href: "/technician-dashboard/profile", icon: User },
   ],
   admin: [
     { label: "Overview", href: "/admin-dashboard", icon: LayoutDashboard },
     { label: "Manage Users", href: "/admin-dashboard/users", icon: User },
     { label: "Categories", href: "/admin-dashboard/categories", icon: Briefcase },
+    { label: "Payments", href: "/admin-dashboard/payments", icon: Wallet },
   ],
 };
 
