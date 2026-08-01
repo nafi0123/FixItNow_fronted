@@ -183,16 +183,13 @@ function TechniciansContent() {
 
   const isTechAvailable = (tech: TechnicianProfile) => {
     if (typeof tech.isAvailable === "boolean") return tech.isAvailable;
-    if (tech.availability && typeof tech.availability === "object" && typeof tech.availability.isAvailable === "boolean") {
-      return tech.availability.isAvailable;
-    }
     return true;
   };
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] pb-24">
       {/* Hero Header */}
-      <section className="relative overflow-hidden bg-[#14171C] py-12 text-white sm:py-16">
+      <section className="relative z-10 overflow-hidden bg-[#14171C] py-12 text-white sm:py-16">
         <div
           className="pointer-events-none absolute -right-20 -top-20 h-96 w-96 rounded-full opacity-20 blur-3xl"
           style={{ background: `radial-gradient(circle, ${CORAL}, ${TEAL})` }}
@@ -246,8 +243,8 @@ function TechniciansContent() {
         </div>
       </section>
 
-      {/* Main Grid Container: 1 Grid Sidebar Filter + 1 Grid Technicians Cards */}
-      <main className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+      {/* Main Container: Sidebar Filter + Technicians Cards */}
+      <main className="relative z-0 mx-auto max-w-7xl px-4 pt-10 pb-24 sm:px-6 lg:px-8">
         {/* Mobile Filter Button (lg:hidden) */}
         <div className="mb-6 flex items-center justify-between lg:hidden">
           <button
@@ -269,12 +266,16 @@ function TechniciansContent() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-          {/* ======================================================== */}
-          {/* GRID COLUMN 1: SIDEBAR FILTER PANEL (Desktop lg:col-span-1) */}
-          {/* ======================================================== */}
-          <aside className="hidden lg:block lg:col-span-1">
-            <div className="sticky top-24 space-y-6 rounded-3xl border border-[#E7E2D8] bg-white p-6 shadow-sm">
+        {/* Flex layout — sidebar + main content */}
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
+          {/* ================================================== */}
+          {/* SIDEBAR FILTER PANEL — sticky inside flex column */}
+          {/* ================================================== */}
+          <aside
+            className="hidden lg:block w-72 shrink-0"
+            style={{ position: "sticky", top: "108px", alignSelf: "flex-start", zIndex: 10 }}
+          >
+            <div className="space-y-6 rounded-3xl border border-[#E7E2D8] bg-white p-6 shadow-sm max-h-[calc(100vh-128px)] overflow-y-auto">
               {/* Filter Panel Header */}
               <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
                 <div className="flex items-center gap-2">
@@ -309,11 +310,10 @@ function TechniciansContent() {
                       setSelectedCategory("");
                       setCurrentPage(1);
                     }}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left font-medium transition-colors ${
-                      selectedCategory === ""
-                        ? "bg-[#FFFBF3] text-[#FF5A36] font-bold border border-[#FF5A36]/30"
-                        : "text-neutral-600 hover:bg-neutral-50"
-                    }`}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left font-medium transition-colors ${selectedCategory === ""
+                      ? "bg-[#FFFBF3] text-[#FF5A36] font-bold border border-[#FF5A36]/30"
+                      : "text-neutral-600 hover:bg-neutral-50"
+                      }`}
                   >
                     <span>All Categories</span>
                     {selectedCategory === "" && <Check className="h-3.5 w-3.5" />}
@@ -332,11 +332,10 @@ function TechniciansContent() {
                           setSelectedCategory(cat.name);
                           setCurrentPage(1);
                         }}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left font-medium transition-colors ${
-                          isSelected
-                            ? "bg-[#FFFBF3] text-[#FF5A36] font-bold border border-[#FF5A36]/30"
-                            : "text-neutral-600 hover:bg-neutral-50"
-                        }`}
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left font-medium transition-colors ${isSelected
+                          ? "bg-[#FFFBF3] text-[#FF5A36] font-bold border border-[#FF5A36]/30"
+                          : "text-neutral-600 hover:bg-neutral-50"
+                          }`}
                       >
                         <span className="truncate">{cat.name}</span>
                         {isSelected && <Check className="h-3.5 w-3.5" />}
@@ -366,11 +365,10 @@ function TechniciansContent() {
                         setMinRating(r.val);
                         setCurrentPage(1);
                       }}
-                      className={`rounded-xl border px-2.5 py-1.5 text-center font-semibold transition-all ${
-                        minRating === r.val
-                          ? "border-[#FF5A36] bg-[#FF5A36]/10 text-[#FF5A36]"
-                          : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
-                      }`}
+                      className={`rounded-xl border px-2.5 py-1.5 text-center font-semibold transition-all ${minRating === r.val
+                        ? "border-[#FF5A36] bg-[#FF5A36]/10 text-[#FF5A36]"
+                        : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
+                        }`}
                     >
                       {r.label}
                     </button>
@@ -419,11 +417,10 @@ function TechniciansContent() {
                         setLocation(location === city ? "" : city);
                         setCurrentPage(1);
                       }}
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold border transition-all ${
-                        location === city
-                          ? "bg-[#FF5A36] text-white border-[#FF5A36]"
-                          : "bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200"
-                      }`}
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold border transition-all ${location === city
+                        ? "bg-[#FF5A36] text-white border-[#FF5A36]"
+                        : "bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200"
+                        }`}
                     >
                       {city}
                     </button>
@@ -476,10 +473,10 @@ function TechniciansContent() {
             </div>
           </aside>
 
-          {/* ======================================================== */}
-          {/* GRID COLUMN 2: TECHNICIANS LIST & CARDS (lg:col-span-3) */}
-          {/* ======================================================== */}
-          <div className="lg:col-span-3 space-y-6">
+          {/* ======================================================= */}
+          {/* TECHNICIANS LIST & CARDS — flex-1 takes remaining space */}
+          {/* ======================================================= */}
+          <div className="flex-1 min-w-0 space-y-6">
             {/* Top Bar: Active Chips & Sort Selector */}
             <div className="flex flex-col gap-4 rounded-2xl border border-[#E7E2D8] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               {/* Active Filter Chips */}
@@ -608,9 +605,8 @@ function TechniciansContent() {
                               <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-[#14171C] text-lg font-extrabold text-white shadow-md">
                                 {tech.user?.name ? tech.user.name.charAt(0).toUpperCase() : "T"}
                                 <span
-                                  className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white ${
-                                    online ? "bg-[#0FA894]" : "bg-neutral-300"
-                                  }`}
+                                  className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white ${online ? "bg-[#0FA894]" : "bg-neutral-300"
+                                    }`}
                                 />
                               </span>
                               <div>
@@ -697,11 +693,10 @@ function TechniciansContent() {
                           <button
                             key={pageNum}
                             onClick={() => setCurrentPage(pageNum)}
-                            className={`h-8 w-8 rounded-xl text-xs font-bold transition-all ${
-                              currentPage === pageNum
-                                ? "bg-[#FF5A36] text-white shadow-sm"
-                                : "bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200"
-                            }`}
+                            className={`h-8 w-8 rounded-xl text-xs font-bold transition-all ${currentPage === pageNum
+                              ? "bg-[#FF5A36] text-white shadow-sm"
+                              : "bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200"
+                              }`}
                           >
                             {pageNum}
                           </button>
