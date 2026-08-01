@@ -35,6 +35,7 @@ const navByRole: Record<Role, { label: string; href: string; icon: typeof Layout
     { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
     { label: "My Bookings", href: "/dashboard/bookings", icon: CalendarCheck },
     { label: "Payments", href: "/dashboard/payments", icon: Wallet },
+    { label: "Profile", href: "/dashboard/profile", icon: User },
   ],
   technician: [
     { label: "Overview", href: "/technician-dashboard", icon: LayoutDashboard },
@@ -48,6 +49,7 @@ const navByRole: Record<Role, { label: string; href: string; icon: typeof Layout
     { label: "Manage Users", href: "/admin-dashboard/users", icon: User },
     { label: "Categories", href: "/admin-dashboard/categories", icon: Briefcase },
     { label: "Payments", href: "/admin-dashboard/payments", icon: Wallet },
+    { label: "Profile", href: "/admin-dashboard/profile", icon: User },
   ],
 };
 
@@ -281,8 +283,8 @@ export default function DashboardLayout({
                       activeRole === "technician"
                         ? "/technician-dashboard/profile"
                         : activeRole === "admin"
-                          ? "/admin-dashboard"
-                          : "/dashboard"
+                          ? "/admin-dashboard/profile"
+                          : "/dashboard/profile"
                     }
                     onClick={() => setUserMenuOpen(false)}
                     className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-[#4A4E58] hover:bg-[#FFF6EA]"

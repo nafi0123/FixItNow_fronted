@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, MapPin, DollarSign, CalendarCheck, Clock, ShieldCheck, Loader2, Wrench, CheckCircle2 } from "lucide-react";
+import { User, MapPin, DollarSign, CalendarCheck, Clock, ShieldCheck, Loader2, Wrench, CheckCircle2, Lock, X } from "lucide-react";
 import { toast } from "sonner";
 import { getPublicCategoriesAction, Category } from "@/src/app/(withcommonlayout)/_actions/publicAction";
 import { getMeAction } from "@/src/app/(authGroup)/_actions/authActions";
+import { changePasswordAction } from "@/src/app/(authGroup)/_actions/profileActions";
 import {
   updateTechnicianProfileAction,
   updateTechnicianAvailabilityAction,
@@ -33,6 +34,11 @@ export default function TechnicianProfilePage() {
   const [savingSchedule, setSavingSchedule] = useState(false);
 
   const [loadingData, setLoadingData] = useState(true);
+
+  // Password Change state
+  const [pwModal, setPwModal] = useState(false);
+  const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [pwSaving, setPwSaving] = useState(false);
 
   const daysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const dayShort: Record<string, string> = {
@@ -136,24 +142,59 @@ export default function TechnicianProfilePage() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!pwForm.currentPassword || !pwForm.newPassword) return;
+    if (pwForm.newPassword !== pwForm.confirmPassword) {
+      toast.error("New passwords do not match!");
+      return;
+    }
+    if (pwForm.newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters.");
+      return;
+    }
+    setPwSaving(true);
+    const result = await changePasswordAction({
+      currentPassword: pwForm.currentPassword,
+      newPassword: pwForm.newPassword,
+    });
+    setPwSaving(false);
+    if (result?.success) {
+      setPwModal(false);
+      setPwForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      toast.success("Password changed successfully!");
+    } else {
+      toast.error(result?.message || "Failed to change password.");
+    }
+  };
+
   const selectedSkillNames = categories.filter((c) => skills.includes(c.id)).map((c) => c.name);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-          style={{ backgroundColor: `${CORAL}12`, color: CORAL_DARK }}
-        >
-          <User className="h-5 w-5" />
-        </span>
-        <div>
-          <h1 className="text-2xl font-extrabold text-[#1E2026]">Profile &amp; schedule</h1>
-          <p className="text-xs text-[#6B707E]">
-            Manage your public profile, hourly rate, skills, and weekly availability.
-          </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            style={{ backgroundColor: `${CORAL}12`, color: CORAL_DARK }}
+          >
+            <User className="h-5 w-5" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-extrabold text-[#1E2026]">Profile &amp; schedule</h1>
+            <p className="text-xs text-[#6B707E]">
+              Manage your public profile, hourly rate, skills, and weekly availability.
+            </p>
+          </div>
         </div>
+
+        <button
+          onClick={() => setPwModal(true)}
+          className="inline-flex items-center gap-2 self-start rounded-xl border border-[#E7E2D8] bg-white px-4 py-2.5 text-xs font-semibold text-[#1E2026] shadow-sm transition-all hover:border-[#FF5A36] hover:text-[#FF5A36] sm:self-auto"
+        >
+          <Lock className="h-4 w-4" style={{ color: CORAL }} />
+          Change password
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[20rem_1fr]">
@@ -526,6 +567,77 @@ export default function TechnicianProfilePage() {
           </div>
         </div>
       </div>
+      {/* Change Password Modal */}
+      {pwModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-[#E7E2D8] bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-[#14171C]">Change Password</h3>
+              <button
+                onClick={() => {
+                  setPwModal(false);
+                  setPwForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                }}
+                className="rounded-full p-1 text-neutral-400 hover:bg-neutral-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-[#14171C]">Current Password</label>
+                <input
+                  type="password"
+                  value={pwForm.currentPassword}
+                  onChange={(e) => setPwForm((p) => ({ ...p, currentPassword: e.target.value }))}
+                  placeholder="Enter current password"
+                  className="w-full rounded-2xl border border-[#E7E2D8] bg-[#FFFBF3] px-4 py-2.5 text-sm font-medium text-[#14171C] outline-none focus:border-[#FF5A36] focus:ring-4 focus:ring-[#FF5A36]/10"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-[#14171C]">New Password</label>
+                <input
+                  type="password"
+                  value={pwForm.newPassword}
+                  onChange={(e) => setPwForm((p) => ({ ...p, newPassword: e.target.value }))}
+                  placeholder="Min. 6 characters"
+                  className="w-full rounded-2xl border border-[#E7E2D8] bg-[#FFFBF3] px-4 py-2.5 text-sm font-medium text-[#14171C] outline-none focus:border-[#FF5A36] focus:ring-4 focus:ring-[#FF5A36]/10"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-[#14171C]">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={pwForm.confirmPassword}
+                  onChange={(e) => setPwForm((p) => ({ ...p, confirmPassword: e.target.value }))}
+                  placeholder="Re-enter new password"
+                  className="w-full rounded-2xl border border-[#E7E2D8] bg-[#FFFBF3] px-4 py-2.5 text-sm font-medium text-[#14171C] outline-none focus:border-[#FF5A36] focus:ring-4 focus:ring-[#FF5A36]/10"
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => {
+                  setPwModal(false);
+                  setPwForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                }}
+                className="flex-1 rounded-2xl border border-[#E7E2D8] py-2.5 text-xs font-bold text-neutral-500 hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleChangePassword}
+                disabled={pwSaving}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-2.5 text-xs font-bold text-white shadow-md transition-all hover:opacity-95 disabled:opacity-70"
+                style={{ background: `linear-gradient(135deg, ${CORAL} 0%, ${CORAL_DARK} 100%)` }}
+              >
+                {pwSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {pwSaving ? "Saving..." : "Change Password"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
