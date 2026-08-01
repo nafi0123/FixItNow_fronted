@@ -1,36 +1,136 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛠️ FixItNow — On-Demand Home Service & Technician Booking Platform
 
-## Getting Started
+![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-First, run the development server:
+**FixItNow** is a modern, full-stack, on-demand home repair and technician booking application. It seamlessly connects customers seeking reliable home services (AC repair, plumbing, electrical work, carpentry, painting, etc.) with background-checked, expert technicians.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🚀 Live Demo & Deployment
+
+- **Frontend Live URL:** [https://fix-it-now-brown.vercel.app](https://fix-it-now-brown.vercel.app)
+- **Backend API URL:** [https://fix-it-2s3255rfv-nafi-mahmud-bukharis-projects.vercel.app](https://fix-it-2s3255rfv-nafi-mahmud-bukharis-projects.vercel.app)
+
+---
+
+## ✨ Key Features & User Roles
+
+### 🌐 Public Portal
+- **Hero & Banner**: Interactive service ticket preview, quick category search, and dynamic visual design system.
+- **Popular Service Categories**: Dynamic categories list fetched from backend with custom category icons & skeleton loaders.
+- **Top Rated Technicians Grid**: Showcases verified technicians with rating badges, locations, hourly rates, and instant booking CTA.
+- **Interactive Contact Page**: Contact form with loading/success states, company info cards, and integrated **Google Maps embed** for Banani, Dhaka location.
+- **Legal & Compliance (`/legal`)**: Interactive multi-tab documentation covering Terms of Service, Privacy Policy, Refund Guidelines, and Technician Code of Conduct with print capabilities.
+
+### 👤 Customer Dashboard (`/dashboard`)
+- **Command Center Overview**: Real-time KPI cards for Total Bookings, Active Services, Completed Jobs, and Total Spent.
+- **My Bookings (`/dashboard/bookings`)**: Manage appointment slots, live status tracking (PENDING, ACCEPTED, DECLINED, COMPLETED), and review submissions.
+- **Online Payments**: Integrated SSLCommerz / gateway online payment workflow with instant invoice state updates.
+- **Profile & Security (`/dashboard/profile`)**: Update name, account details, and **Change Password modal** with live validation.
+
+### 👨‍🔧 Technician Dashboard (`/technician-dashboard`)
+- **Profile & Skills Management**: Customize public bio, location, base hourly rate, and category skill tags.
+- **Availability Schedule**: Set active booking status toggle, working days (Mon-Sun), and daily working hours.
+- **Job Requests**: Manage incoming client requests and mark job progress.
+- **Security**: Dedicated Change Password modal and profile updates.
+
+### 👑 Admin Dashboard (`/admin-dashboard`)
+- **Platform Analytics**: Total System Users count, Category statistics, System Revenue (৳), and Account restrictions health.
+- **User Management (`/admin-dashboard/users`)**: Search users, filter by roles (Customer, Technician, Admin), and **Ban / Unban** accounts instantly.
+- **Category CRUD (`/admin-dashboard/categories`)**: Create, edit, search, and delete service categories with automatic revalidation.
+- **Payment Audit (`/admin-dashboard/payments`)**: Monitor platform-wide transaction history and status logs.
+
+---
+
+## 🛠️ Tech Stack & Libraries
+
+- **Framework:** [Next.js 15](https://nextjs.org/) (App Router, Server Actions, Server Components)
+- **Language:** [TypeScript](https://www.typescriptlang.org/)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/) & Vanilla CSS Design System (`#FF5A36` Coral, `#0FA894` Teal, `#14171C` Ink)
+- **Icons & UI Utilities:** [Lucide React](https://lucide.dev/), [Sonner](https://sonner.emilkowal.si/) (Toast Notifications)
+- **HTTP & Authentication:** JWT Cookie Session Handler & Next.js Revalidation Tags (`revalidateTag`, `revalidatePath`)
+
+---
+
+## 📁 Repository Structure
+
+```text
+frontend/
+├── src/
+│   ├── app/
+│   │   ├── (authGroup)/             # Authentication routes & server actions
+│   │   │   ├── login/
+│   │   │   ├── register/
+│   │   │   └── _actions/            # authActions.ts, profileActions.ts
+│   │   ├── (withcommonlayout)/      # Public pages with header & footer navigation
+│   │   │   ├── categories/
+│   │   │   ├── contact/             # Contact Us with Google Maps embed
+│   │   │   ├── legal/               # Legal & Compliance document tabs
+│   │   │   ├── services/
+│   │   │   ├── technicians/         # Technicians listing & JS sticky sidebar
+│   │   │   └── page.tsx             # Main Landing Homepage
+│   │   └── (withoutcommonlayout)/   # Role-based App Dashboards
+│   │       ├── admin-dashboard/     # Admin Command Center & Management
+│   │       ├── dashboard/           # Customer App Dashboard & Bookings
+│   │       └── technician-dashboard/ # Technician Profile & Schedule Manager
+│   └── components/
+│       ├── home/                    # Banner, FeaturedCategories, FeaturedTechnicians, Faq
+│       └── shared/                  # Navbar, Footer, UI Cards
+├── public/                          # Static assets
+└── package.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ⚙️ Getting Started Locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Prerequisites
 
-## Learn More
+- Node.js `v18.x` or higher
+- npm or yarn
 
-To learn more about Next.js, take a look at the following resources:
+### Installation Steps
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/nafi0123/FixItNow_fronted.git
+   cd FixItNow_fronted
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-## Deploy on Vercel
+3. **Configure Environment Variables:**
+   Create a `.env.local` file in the root directory:
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:5001
+   BACKEND_API_URL=http://localhost:5001
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. **Run the Development Server:**
+   ```bash
+   npm run dev
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🧪 Type Check & Build Verification
+
+To verify TypeScript types prior to production build:
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
