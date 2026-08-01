@@ -653,20 +653,24 @@ function TechniciansContent() {
                         </div>
 
                         {/* Footer details & Action */}
-                        <div className="mt-6 flex items-center justify-between border-t border-neutral-100 pt-4">
-                          <div>
-                            <span className="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">Standard Rate</span>
-                            <p className="text-lg font-extrabold text-[#14171C]">
-                              ${tech.basePrice || tech.hourlyRate || 35}<span className="text-xs font-normal text-neutral-500">/hr</span>
+                        <div className="mt-6 flex items-end justify-between border-t border-neutral-100 pt-4 gap-2">
+                          <div className="min-w-0">
+                            <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 leading-none mb-1">
+                              Standard Rate
+                            </span>
+                            <p className="text-base font-extrabold text-[#14171C] leading-none">
+                              ৳{tech.basePrice || tech.hourlyRate || 35}
+                              <span className="text-xs font-normal text-neutral-500">/hr</span>
                             </p>
                           </div>
 
                           <Link
                             href={`/technicians/${tech.id}`}
-                            className="inline-flex items-center gap-1 rounded-xl bg-[#14171C] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-[#FF5A36]"
+                            className="group/btn inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#14171C] px-3.5 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-[#FF5A36] active:scale-95"
                           >
-                            View Profile
-                            <ArrowRight className="h-3.5 w-3.5" />
+                            <User className="h-3.5 w-3.5 text-[#FF5A36] group-hover/btn:text-white transition-colors" />
+                            <span>View Profile</span>
+                            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-0.5" />
                           </Link>
                         </div>
                       </div>

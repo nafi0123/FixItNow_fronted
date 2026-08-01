@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useState, useEffect } from "react"
+import { useActionState, useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { Wrench, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Star } from "lucide-react"
@@ -17,6 +17,17 @@ const LoginForm = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  const handleQuickLogin = (emailVal: string, passVal: string) => {
+    setEmail(emailVal)
+    setPassword(passVal)
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.requestSubmit()
+      }
+    }, 50)
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -62,7 +73,7 @@ const LoginForm = () => {
             Log in to manage bookings, track technicians, and pick up where you left off.
           </p>
 
-          <form action={action} className="mt-8 space-y-4">
+          <form ref={formRef} action={action} className="mt-8 space-y-4">
             {state && !state.success && state.message && (
               <div className="rounded-xl border border-[#FF5A36]/20 bg-[#FF5A36]/10 p-3 text-xs font-medium text-[#C23B1F]">
                 {state.message}
@@ -148,9 +159,42 @@ const LoginForm = () => {
             </button>
           </form>
 
+          {/* Quick Demo Login Buttons */}
+          <div className="mt-6 space-y-2.5 rounded-2xl border border-[#E7E2D8] bg-white/60 p-3.5 backdrop-blur-sm">
+            <div className="flex items-center justify-between text-xs font-bold text-[#1E2026]">
+              <span>Demo Accounts (Click to Autofill)</span>
+              <span className="rounded-md bg-[#FF5A36]/10 px-2 py-0.5 text-[10px] font-bold text-[#FF5A36]">Quick Demo</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => handleQuickLogin("nafi.cse0123@gmail.com", "123456")}
+                className="group flex flex-col items-center justify-center rounded-xl border border-[#E7E2D8] bg-white p-2.5 text-center transition-all hover:border-[#1E2026] hover:bg-[#1E2026] disabled:opacity-50"
+              >
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#1E2026] group-hover:text-white">
+                  <ShieldCheck className="h-4 w-4 text-[#FF5A36]" />
+                  <span>Login as Admin</span>
+                </div>
+                <span className="mt-0.5 text-[10px] text-[#6B707E] group-hover:text-white/80">nafi.cse0123@gmail.com</span>
+              </button>
 
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => handleQuickLogin("nafi2122940@gmail.com", "123456")}
+                className="group flex flex-col items-center justify-center rounded-xl border border-[#E7E2D8] bg-white p-2.5 text-center transition-all hover:border-[#1E2026] hover:bg-[#1E2026] disabled:opacity-50"
+              >
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#1E2026] group-hover:text-white">
+                  <Wrench className="h-4 w-4 text-[#00D1B2]" />
+                  <span>Login as Tech</span>
+                </div>
+                <span className="mt-0.5 text-[10px] text-[#6B707E] group-hover:text-white/80">nafi2122940@gmail.com</span>
+              </button>
+            </div>
+          </div>
 
-          <p className="mt-8 text-center text-sm text-[#6B707E]">
+          <p className="mt-6 text-center text-sm text-[#6B707E]">
             New to FixItNow?{" "}
             <Link href="/register" className="font-semibold text-[#C23B1F] hover:underline">
               Create an account

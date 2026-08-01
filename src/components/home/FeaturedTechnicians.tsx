@@ -180,22 +180,23 @@ export default function FeaturedTechnicians() {
                     </div>
                   </div>
 
-                  {/* Footer Row: Rate & Book Button */}
-                  <div className="mt-6 flex items-center justify-between border-t border-neutral-100 pt-4">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Rate</span>
-                      <p className="text-sm font-extrabold text-[#14171C]">
-                        ৳{rate} <span className="text-[10px] font-normal text-neutral-500">/ hr</span>
+                  {/* Footer Row: Rate & View Profile Button */}
+                  <div className="mt-6 flex items-end justify-between border-t border-neutral-100 pt-4 gap-2">
+                    <div className="min-w-0">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 leading-none mb-1">Standard Rate</span>
+                      <p className="text-base font-extrabold text-[#14171C] leading-none">
+                        ৳{rate} <span className="text-xs font-normal text-neutral-500">/ hr</span>
                       </p>
                     </div>
 
                     <Link
                       href={`/technicians/${tech.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:opacity-90 active:scale-95"
+                      className="group/btn inline-flex shrink-0 items-center justify-center gap-1.5 rounded-2xl px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:opacity-90 active:scale-95"
                       style={{ background: `linear-gradient(135deg, ${CORAL} 0%, ${CORAL_DARK} 100%)` }}
                     >
-                      Book Now
-                      <ArrowRight className="h-3.5 w-3.5" />
+                      <User className="h-3.5 w-3.5" />
+                      <span>View Profile</span>
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-0.5" />
                     </Link>
                   </div>
                 </div>
