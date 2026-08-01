@@ -93,12 +93,12 @@ export default function Banner() {
 
         {/* Right: a live "booking ticket" mockup — the signature visual */}
         <div className="relative mx-auto w-full max-w-sm lg:mx-0 lg:ml-auto">
-          {/* floating category chips */}
-          <div className="absolute -left-4 -top-4 hidden items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#1E2026] shadow-md sm:flex">
+          {/* floating category chip — relative so it sits fully above the card, never clipped */}
+          <div className="relative z-10 mb-3 hidden w-fit items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#1E2026] shadow-md sm:flex">
             <Wrench className="h-3.5 w-3.5" style={{ color: TEAL }} />
             AC Repair
           </div>
-          <div className="absolute -right-3 top-20 hidden items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#1E2026] shadow-md sm:flex">
+          <div className="absolute -right-3 top-24 z-10 hidden items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#1E2026] shadow-md sm:flex">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: TEAL }} />
             Plumbing
           </div>
