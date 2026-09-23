@@ -70,6 +70,7 @@ export default function TechnicianRequestsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -100,6 +101,7 @@ export default function TechnicianRequestsPage() {
         page,
         limit,
         search: debouncedSearch,
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
       });
 
       if (res && res.success) {
@@ -109,7 +111,7 @@ export default function TechnicianRequestsPage() {
         if (res.meta) setMeta(nextMeta);
 
         // Cache default page 1 unscoped query
-        if (!debouncedSearch && page === 1 && typeof window !== "undefined") {
+        if (!debouncedSearch && statusFilter === "ALL" && page === 1 && typeof window !== "undefined") {
           sessionStorage.setItem(
             CACHE_KEY,
             JSON.stringify({
@@ -150,7 +152,7 @@ export default function TechnicianRequestsPage() {
       document.removeEventListener("visibilitychange", onVisibility);
       clearInterval(interval);
     };
-  }, [page, limit, debouncedSearch]);
+  }, [page, limit, debouncedSearch, statusFilter]);
 
   const handleStatusUpdate = async (bookingId: string, status: "ACCEPTED" | "DECLINED" | "COMPLETED") => {
     setActionLoading(bookingId);
@@ -184,44 +186,76 @@ export default function TechnicianRequestsPage() {
         </div>
       </div>
 
-      {/* Control Bar */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-[#E7E2D8] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="group relative flex w-full items-center gap-2.5 rounded-xl border border-[#E7E2D8] bg-white px-3.5 py-2.5 shadow-sm transition-all focus-within:border-[#FF5A36] focus-within:ring-4 focus-within:ring-[#FF5A36]/10 sm:w-80">
-          <Search className="h-4 w-4 shrink-0 text-[#9AA0AA] transition-colors group-focus-within:text-[#FF5A36]" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by customer or email..."
-            className="w-full bg-transparent text-xs font-medium text-[#1E2026] outline-none placeholder:text-[#9AA0AA]"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#F1EEE6] text-[#6B707E] transition-colors hover:bg-[#FF5A36] hover:text-white"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
+      {/* Control Bar & Status Filter Tabs */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-[#E7E2D8] bg-white p-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="group relative flex w-full items-center gap-2.5 rounded-xl border border-[#E7E2D8] bg-white px-3.5 py-2.5 shadow-sm transition-all focus-within:border-[#FF5A36] focus-within:ring-4 focus-within:ring-[#FF5A36]/10 sm:w-80">
+            <Search className="h-4 w-4 shrink-0 text-[#9AA0AA] transition-colors group-focus-within:text-[#FF5A36]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by customer or email..."
+              className="w-full bg-transparent text-xs font-medium text-[#1E2026] outline-none placeholder:text-[#9AA0AA]"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#F1EEE6] text-[#6B707E] transition-colors hover:bg-[#FF5A36] hover:text-white"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 rounded-xl border border-[#E7E2D8] bg-[#FFFBF3] px-3 py-2 text-xs">
+              <span className="text-[#6B707E]">Show:</span>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="bg-transparent font-semibold text-[#1E2026] outline-none"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 rounded-xl border border-[#E7E2D8] bg-[#FFFBF3] px-3 py-2 text-xs">
-            <span className="text-[#6B707E]">Show:</span>
-            <select
-              value={limit}
-              onChange={(e) => {
-                setLimit(Number(e.target.value));
-                setPage(1);
-              }}
-              className="bg-transparent font-semibold text-[#1E2026] outline-none"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
+        {/* Status Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-[#E7E2D8] pt-3">
+          {[
+            { id: "ALL", label: "All Requests", color: "bg-[#1E2026] text-white" },
+            { id: "PENDING", label: "Pending", color: "bg-[#FF5A36] text-white" },
+            { id: "ACCEPTED", label: "Accepted", color: "bg-[#0FA894] text-white" },
+            { id: "COMPLETED", label: "Completed", color: "bg-emerald-600 text-white" },
+            { id: "DECLINED", label: "Declined", color: "bg-rose-600 text-white" },
+          ].map((tab) => {
+            const isSelected = statusFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setStatusFilter(tab.id);
+                  setPage(1);
+                }}
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+                  isSelected
+                    ? `${tab.color} shadow-sm`
+                    : "border border-[#E7E2D8] bg-[#FAF8F5] text-[#6B707E] hover:bg-[#FFFBF3] hover:text-[#1E2026]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
