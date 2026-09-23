@@ -55,41 +55,10 @@ const TEAL = "#0FA894";
 const CACHE_KEY = "customer_overview_cache";
 
 export default function CustomerDashboardPage() {
-  const [user, setUser] = useState<any>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached ? JSON.parse(cached).user : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const [bookings, setBookings] = useState<Booking[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached ? JSON.parse(cached).bookings || [] : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [totalBookingsCount, setTotalBookingsCount] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached ? JSON.parse(cached).totalBookingsCount || 0 : 0;
-    } catch {
-      return 0;
-    }
-  });
-
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !sessionStorage.getItem(CACHE_KEY);
-  });
-
+  const [user, setUser] = useState<any>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [totalBookingsCount, setTotalBookingsCount] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
 
@@ -146,7 +115,21 @@ export default function CustomerDashboardPage() {
   };
 
   useEffect(() => {
-    loadCustomerDashboard(true);
+    // 🌟 Restore from cache on mount (client-only, prevents SSR hydration mismatch)
+    let hasCache = false;
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.user) setUser(parsed.user);
+        if (Array.isArray(parsed.bookings)) setBookings(parsed.bookings);
+        if (typeof parsed.totalBookingsCount === "number") setTotalBookingsCount(parsed.totalBookingsCount);
+        setLoading(false);
+        hasCache = true;
+      }
+    } catch {}
+
+    loadCustomerDashboard(hasCache);
 
     const onFocus = () => loadCustomerDashboard(true);
     const onVisibility = () => {

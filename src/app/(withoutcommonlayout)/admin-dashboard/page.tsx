@@ -51,50 +51,11 @@ interface UserItem {
 }
 
 export default function AdminDashboardPage() {
-  const [adminName, setAdminName] = useState<string>(() => {
-    if (typeof window === "undefined") return "Admin";
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached ? JSON.parse(cached).adminName || "Admin" : "Admin";
-    } catch {
-      return "Admin";
-    }
-  });
-
-  const [users, setUsers] = useState<UserItem[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached ? JSON.parse(cached).users || [] : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [categoriesCount, setCategoriesCount] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached ? JSON.parse(cached).categoriesCount || 0 : 0;
-    } catch {
-      return 0;
-    }
-  });
-
-  const [payments, setPayments] = useState<PaymentItem[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached ? JSON.parse(cached).payments || [] : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !sessionStorage.getItem(CACHE_KEY);
-  });
+  const [adminName, setAdminName] = useState<string>("Admin");
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [categoriesCount, setCategoriesCount] = useState<number>(0);
+  const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
@@ -167,7 +128,22 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    loadDashboardData(true);
+    // 🌟 Restore from cache on mount (client-only, prevents SSR hydration mismatch)
+    let hasCache = false;
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.adminName) setAdminName(parsed.adminName);
+        if (Array.isArray(parsed.users)) setUsers(parsed.users);
+        if (typeof parsed.categoriesCount === "number") setCategoriesCount(parsed.categoriesCount);
+        if (Array.isArray(parsed.payments)) setPayments(parsed.payments);
+        setLoading(false);
+        hasCache = true;
+      }
+    } catch {}
+
+    loadDashboardData(hasCache);
 
     const onFocus = () => loadDashboardData(true);
     const onVisibility = () => {

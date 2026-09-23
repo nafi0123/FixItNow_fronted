@@ -46,29 +46,10 @@ function getInitials(name: string) {
 }
 
 export default function AdminProfilePage() {
-  const [user, setUser] = useState<UserData | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const cached = sessionStorage.getItem("admin_profile_cache");
-      return cached ? JSON.parse(cached) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !sessionStorage.getItem("admin_profile_cache");
-  });
+  const [user, setUser] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [nameInput, setNameInput] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      const cached = sessionStorage.getItem("admin_profile_cache");
-      return cached ? JSON.parse(cached)?.name || "" : "";
-    } catch {
-      return "";
-    }
-  });
+  const [nameInput, setNameInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [pwModal, setPwModal] = useState(false);
@@ -76,6 +57,17 @@ export default function AdminProfilePage() {
   const [pwSaving, setPwSaving] = useState(false);
 
   useEffect(() => {
+    // 🌟 Restore from cache on mount (client-only, prevents SSR hydration mismatch)
+    try {
+      const cached = sessionStorage.getItem("admin_profile_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setUser(parsed);
+        if (parsed.name) setNameInput(parsed.name);
+        setLoading(false);
+      }
+    } catch {}
+
     getMeAction().then((data) => {
       if (data) {
         setUser(data);

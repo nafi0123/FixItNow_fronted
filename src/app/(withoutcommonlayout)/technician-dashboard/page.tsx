@@ -56,50 +56,11 @@ interface Booking {
 }
 
 export default function TechnicianDashboardPage() {
-  const [bookings, setBookings] = useState<Booking[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached ? JSON.parse(cached).bookings || [] : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [categories, setCategories] = useState<Category[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached ? JSON.parse(cached).categories || [] : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [meta, setMeta] = useState(() => {
-    if (typeof window === "undefined") return { page: 1, limit: 5, total: 0, totalPage: 1 };
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached && JSON.parse(cached).meta ? JSON.parse(cached).meta : { page: 1, limit: 5, total: 0, totalPage: 1 };
-    } catch {
-      return { page: 1, limit: 5, total: 0, totalPage: 1 };
-    }
-  });
-
-  const [isAvailable, setIsAvailable] = useState(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached && typeof JSON.parse(cached).isAvailable === "boolean" ? JSON.parse(cached).isAvailable : true;
-    } catch {
-      return true;
-    }
-  });
-
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !sessionStorage.getItem(CACHE_KEY);
-  });
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [meta, setMeta] = useState({ page: 1, limit: 5, total: 0, totalPage: 1 });
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -190,7 +151,22 @@ export default function TechnicianDashboardPage() {
   };
 
   useEffect(() => {
-    loadDashboardData(true);
+    // 🌟 Restore from cache on mount (client-only, prevents SSR hydration mismatch)
+    let hasCache = false;
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.bookings)) setBookings(parsed.bookings);
+        if (Array.isArray(parsed.categories)) setCategories(parsed.categories);
+        if (parsed.meta) setMeta(parsed.meta);
+        if (typeof parsed.isAvailable === "boolean") setIsAvailable(parsed.isAvailable);
+        setLoading(false);
+        hasCache = true;
+      }
+    } catch {}
+
+    loadDashboardData(hasCache);
 
     const onFocus = () => loadDashboardData(true);
     const onVisibility = () => {

@@ -41,30 +41,9 @@ const CORAL_DARK = "#C23B1F";
 const CACHE_KEY = "technician_requests_cache";
 
 export default function TechnicianRequestsPage() {
-  const [bookings, setBookings] = useState<Booking[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached ? JSON.parse(cached).bookings || [] : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [meta, setMeta] = useState<MetaData>(() => {
-    if (typeof window === "undefined") return { page: 1, limit: 10, total: 0, totalPage: 1 };
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      return cached && JSON.parse(cached).meta ? JSON.parse(cached).meta : { page: 1, limit: 10, total: 0, totalPage: 1 };
-    } catch {
-      return { page: 1, limit: 10, total: 0, totalPage: 1 };
-    }
-  });
-
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !sessionStorage.getItem(CACHE_KEY);
-  });
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [meta, setMeta] = useState<MetaData>({ page: 1, limit: 10, total: 0, totalPage: 1 });
+  const [loading, setLoading] = useState(true);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -75,6 +54,19 @@ export default function TechnicianRequestsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+
+  // 🌟 Restore from cache on mount (client-only, prevents SSR hydration mismatch)
+  useEffect(() => {
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.bookings)) setBookings(parsed.bookings);
+        if (parsed.meta) setMeta(parsed.meta);
+        setLoading(false);
+      }
+    } catch {}
+  }, []);
 
   // Debounce search input
   useEffect(() => {

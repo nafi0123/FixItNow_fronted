@@ -64,37 +64,10 @@ const CORAL = "#FF5A36";
 const CORAL_DARK = "#C23B1F";
 
 export default function CustomerDashboardPage() {
-  const [user, setUser] = useState<any>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const cached = sessionStorage.getItem("customer_user_cache");
-      return cached ? JSON.parse(cached) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [bookings, setBookings] = useState<Booking[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const cached = sessionStorage.getItem("customer_bookings_cache");
-      return cached ? JSON.parse(cached) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [meta, setMeta] = useState<MetaData>(() => {
-    if (typeof window === "undefined") return { page: 1, limit: 10, total: 0, totalPage: 1 };
-    try {
-      const cached = sessionStorage.getItem("customer_bookings_meta_cache");
-      return cached ? JSON.parse(cached) : { page: 1, limit: 10, total: 0, totalPage: 1 };
-    } catch {
-      return { page: 1, limit: 10, total: 0, totalPage: 1 };
-    }
-  });
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !sessionStorage.getItem("customer_bookings_cache");
-  });
+  const [user, setUser] = useState<any>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [meta, setMeta] = useState<MetaData>({ page: 1, limit: 10, total: 0, totalPage: 1 });
+  const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
@@ -112,6 +85,22 @@ export default function CustomerDashboardPage() {
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+
+  // 🌟 Restore from cache on mount (client-only, prevents SSR hydration mismatch)
+  useEffect(() => {
+    try {
+      const cachedUser = sessionStorage.getItem("customer_user_cache");
+      if (cachedUser) setUser(JSON.parse(cachedUser));
+
+      const cachedBookings = sessionStorage.getItem("customer_bookings_cache");
+      if (cachedBookings) {
+        setBookings(JSON.parse(cachedBookings));
+        setLoading(false);
+      }
+      const cachedMeta = sessionStorage.getItem("customer_bookings_meta_cache");
+      if (cachedMeta) setMeta(JSON.parse(cachedMeta));
+    } catch {}
+  }, []);
 
   // Debounce search input
   useEffect(() => {

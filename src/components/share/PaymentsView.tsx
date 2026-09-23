@@ -30,19 +30,8 @@ interface PaymentsViewProps {
 }
 
 export default function PaymentsView({ userRole = "CUSTOMER" }: PaymentsViewProps) {
-  const [payments, setPayments] = useState<PaymentItem[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const cached = sessionStorage.getItem(`payments_cache_${userRole}`);
-      return cached ? JSON.parse(cached) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [loading, setLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !sessionStorage.getItem(`payments_cache_${userRole}`);
-  });
+  const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<PaymentItem | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
@@ -70,7 +59,18 @@ export default function PaymentsView({ userRole = "CUSTOMER" }: PaymentsViewProp
   };
 
   useEffect(() => {
-    fetchPayments(payments.length > 0);
+    // 🌟 Restore from cache on mount (client-only, prevents SSR hydration mismatch)
+    let hasCache = false;
+    try {
+      const cached = sessionStorage.getItem(`payments_cache_${userRole}`);
+      if (cached) {
+        setPayments(JSON.parse(cached));
+        setLoading(false);
+        hasCache = true;
+      }
+    } catch {}
+
+    fetchPayments(hasCache);
   }, [userRole]);
 
   const handleViewDetails = async (transactionId: string) => {
