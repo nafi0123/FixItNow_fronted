@@ -51,10 +51,37 @@ export default function TechnicianProfilePage() {
     Sunday: "Sun",
   };
 
-  // Fetch initial profile & categories
+  // Fetch initial profile & categories with cache-first loading
   useEffect(() => {
+    // 🌟 Cache-first loading
+    try {
+      const cachedProf = sessionStorage.getItem("technician_profile_cache");
+      const cachedCats = sessionStorage.getItem("categories_cache");
+
+      if (cachedCats) {
+        setCategories(JSON.parse(cachedCats));
+      }
+
+      if (cachedProf) {
+        const prof = JSON.parse(cachedProf);
+        if (prof.bio) setBio(prof.bio);
+        if (prof.location) setLocation(prof.location);
+        if (prof.basePrice) setHourlyRate(prof.basePrice);
+        if (Array.isArray(prof.skills)) setSkills(prof.skills);
+
+        if (prof.availability && typeof prof.availability === "object") {
+          const avail = prof.availability;
+          if (typeof avail.isAvailable === "boolean") setIsAvailable(avail.isAvailable);
+          if (Array.isArray(avail.workingDays)) setWorkingDays(avail.workingDays);
+          if (typeof avail.workingHours === "string" && avail.workingHours.trim() !== "") {
+            setWorkingHours(avail.workingHours);
+          }
+        }
+        setLoadingData(false);
+      }
+    } catch {}
+
     const loadInitialData = async () => {
-      setLoadingData(true);
       const [catRes, user] = await Promise.all([
         getPublicCategoriesAction({ limit: 100 }),
         getMeAction(),
@@ -62,6 +89,9 @@ export default function TechnicianProfilePage() {
 
       if (catRes && catRes.success && Array.isArray(catRes.data)) {
         setCategories(catRes.data);
+        try {
+          sessionStorage.setItem("categories_cache", JSON.stringify(catRes.data));
+        } catch {}
       }
 
       if (user && user.technicianProfile) {
@@ -79,6 +109,10 @@ export default function TechnicianProfilePage() {
             setWorkingHours(avail.workingHours);
           }
         }
+
+        try {
+          sessionStorage.setItem("technician_profile_cache", JSON.stringify(prof));
+        } catch {}
       }
       setLoadingData(false);
     };
@@ -99,6 +133,20 @@ export default function TechnicianProfilePage() {
 
     if (res && res.success) {
       toast.success(res.message || "Profile details updated successfully!");
+      try {
+        const cached = sessionStorage.getItem("technician_profile_cache");
+        const parsed = cached ? JSON.parse(cached) : {};
+        sessionStorage.setItem(
+          "technician_profile_cache",
+          JSON.stringify({
+            ...parsed,
+            bio: bio.trim(),
+            location: location.trim(),
+            basePrice: Number(hourlyRate) || 50,
+            skills,
+          })
+        );
+      } catch {}
     } else {
       toast.error(res?.message || "Failed to update profile details.");
     }

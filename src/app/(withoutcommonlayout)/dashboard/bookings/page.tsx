@@ -64,10 +64,37 @@ const CORAL = "#FF5A36";
 const CORAL_DARK = "#C23B1F";
 
 export default function CustomerDashboardPage() {
-  const [user, setUser] = useState<any>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [meta, setMeta] = useState<MetaData>({ page: 1, limit: 10, total: 0, totalPage: 1 });
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const cached = sessionStorage.getItem("customer_user_cache");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [bookings, setBookings] = useState<Booking[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cached = sessionStorage.getItem("customer_bookings_cache");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [meta, setMeta] = useState<MetaData>(() => {
+    if (typeof window === "undefined") return { page: 1, limit: 10, total: 0, totalPage: 1 };
+    try {
+      const cached = sessionStorage.getItem("customer_bookings_meta_cache");
+      return cached ? JSON.parse(cached) : { page: 1, limit: 10, total: 0, totalPage: 1 };
+    } catch {
+      return { page: 1, limit: 10, total: 0, totalPage: 1 };
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !sessionStorage.getItem("customer_bookings_cache");
+  });
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
@@ -95,8 +122,8 @@ export default function CustomerDashboardPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     const [meRes, bookingsRes] = await Promise.all([
       getMeAction(),
       getUserBookingsAction({
@@ -107,22 +134,56 @@ export default function CustomerDashboardPage() {
       }),
     ]);
 
-    if (meRes) setUser(meRes);
+    if (meRes) {
+      setUser(meRes);
+      try {
+        sessionStorage.setItem("customer_user_cache", JSON.stringify(meRes));
+      } catch {}
+    }
 
     if (bookingsRes && bookingsRes.success && Array.isArray(bookingsRes.data)) {
       setBookings(bookingsRes.data);
+      try {
+        sessionStorage.setItem("customer_bookings_cache", JSON.stringify(bookingsRes.data));
+      } catch {}
       if (bookingsRes.meta) {
         setMeta(bookingsRes.meta);
+        try {
+          sessionStorage.setItem("customer_bookings_meta_cache", JSON.stringify(bookingsRes.meta));
+        } catch {}
       }
     } else {
-      setBookings([]);
-      setMeta({ page: 1, limit, total: 0, totalPage: 1 });
+      if (!silent) {
+        setBookings([]);
+        setMeta({ page: 1, limit, total: 0, totalPage: 1 });
+      }
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    loadData();
+    loadData(bookings.length > 0);
+  }, [page, limit, debouncedSearch, filterStatus]);
+
+  // 🌟 Auto refetch when tab is focused, visible, or periodically every 15s
+  useEffect(() => {
+    const onFocus = () => loadData(true);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") loadData(true);
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadData(true);
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearInterval(interval);
+    };
   }, [page, limit, debouncedSearch, filterStatus]);
 
   const handleViewDetails = async (bookingId: string) => {

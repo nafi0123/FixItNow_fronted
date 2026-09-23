@@ -31,6 +31,8 @@ import {
 const CORAL = "#FF5A36";
 const TEAL = "#0FA894";
 
+const CACHE_KEY = "technician_overview_cache";
+
 interface Booking {
   id: string;
   serviceId?: string;
@@ -54,16 +56,56 @@ interface Booking {
 }
 
 export default function TechnicianDashboardPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [meta, setMeta] = useState({ page: 1, limit: 5, total: 0, totalPage: 1 });
-  const [loading, setLoading] = useState(true);
+  const [bookings, setBookings] = useState<Booking[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      return cached ? JSON.parse(cached).bookings || [] : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [categories, setCategories] = useState<Category[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      return cached ? JSON.parse(cached).categories || [] : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [meta, setMeta] = useState(() => {
+    if (typeof window === "undefined") return { page: 1, limit: 5, total: 0, totalPage: 1 };
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      return cached && JSON.parse(cached).meta ? JSON.parse(cached).meta : { page: 1, limit: 5, total: 0, totalPage: 1 };
+    } catch {
+      return { page: 1, limit: 5, total: 0, totalPage: 1 };
+    }
+  });
+
+  const [isAvailable, setIsAvailable] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      return cached && typeof JSON.parse(cached).isAvailable === "boolean" ? JSON.parse(cached).isAvailable : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !sessionStorage.getItem(CACHE_KEY);
+  });
+
+  const [isSyncing, setIsSyncing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
-  // Availability State
-  const [isAvailable, setIsAvailable] = useState(true);
   const [toggleLoading, setToggleLoading] = useState(false);
 
   // Modals state
@@ -90,31 +132,83 @@ export default function TechnicianDashboardPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Fetch bookings and categories
-  const loadDashboardData = async () => {
-    setLoading(true);
-    const [bookingsRes, catRes] = await Promise.all([
-      getTechnicianBookingsAction({ page: currentPage, limit: pageSize }),
-      getPublicCategoriesAction({ limit: 100 }),
-    ]);
-
-    if (bookingsRes && bookingsRes.success) {
-      setBookings(bookingsRes.data || []);
-      if (bookingsRes.meta) setMeta(bookingsRes.meta);
-    } else {
-      setBookings([]);
-    }
-
-    if (catRes && catRes.success && Array.isArray(catRes.data)) {
-      setCategories(catRes.data);
-      if (!serviceForm.categoryId && catRes.data.length > 0) {
-        setServiceForm((prev) => ({ ...prev, categoryId: catRes.data[0].id }));
+  const loadDashboardData = async (isBackground = false) => {
+    if (!isBackground) {
+      if (bookings.length === 0) {
+        setLoading(true);
+      } else {
+        setIsSyncing(true);
       }
+    } else {
+      setIsSyncing(true);
     }
-    setLoading(false);
+
+    try {
+      const [bookingsRes, catRes] = await Promise.all([
+        getTechnicianBookingsAction({ page: currentPage, limit: pageSize }),
+        getPublicCategoriesAction({ limit: 100 }),
+      ]);
+
+      let nextBookings = bookings;
+      let nextMeta = meta;
+      let nextCategories = categories;
+
+      if (bookingsRes && bookingsRes.success) {
+        nextBookings = bookingsRes.data || [];
+        setBookings(nextBookings);
+        if (bookingsRes.meta) {
+          nextMeta = bookingsRes.meta;
+          setMeta(nextMeta);
+        }
+      }
+
+      if (catRes && catRes.success && Array.isArray(catRes.data)) {
+        nextCategories = catRes.data;
+        setCategories(nextCategories);
+        if (!serviceForm.categoryId && catRes.data.length > 0) {
+          setServiceForm((prev) => ({ ...prev, categoryId: catRes.data[0].id }));
+        }
+      }
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(
+          CACHE_KEY,
+          JSON.stringify({
+            bookings: nextBookings,
+            meta: nextMeta,
+            categories: nextCategories,
+            isAvailable,
+          })
+        );
+      }
+    } catch (err) {
+      console.error("loadDashboardData error:", err);
+    } finally {
+      setLoading(false);
+      setIsSyncing(false);
+    }
   };
 
   useEffect(() => {
-    loadDashboardData();
+    loadDashboardData(true);
+
+    const onFocus = () => loadDashboardData(true);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") loadDashboardData(true);
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadDashboardData(true);
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearInterval(interval);
+    };
   }, [currentPage]);
 
   // Handle Availability Toggle
@@ -126,6 +220,13 @@ export default function TechnicianDashboardPage() {
     });
     if (res && res.success) {
       setIsAvailable(nextState);
+      if (typeof window !== "undefined") {
+        try {
+          const cached = sessionStorage.getItem(CACHE_KEY);
+          const parsed = cached ? JSON.parse(cached) : {};
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ...parsed, isAvailable: nextState }));
+        } catch {}
+      }
       setMessage({ type: "success", text: `Availability status updated to ${nextState ? "Available" : "Busy"}!` });
     } else {
       setMessage({ type: "error", text: res.message || "Failed to update availability status." });
@@ -139,7 +240,7 @@ export default function TechnicianDashboardPage() {
     const res = await updateTechnicianBookingStatusAction(bookingId, status);
     if (res && res.success) {
       setMessage({ type: "success", text: `Booking status updated to ${status}!` });
-      await loadDashboardData();
+      await loadDashboardData(false);
     } else {
       setMessage({ type: "error", text: res.message || "Failed to update booking status." });
     }

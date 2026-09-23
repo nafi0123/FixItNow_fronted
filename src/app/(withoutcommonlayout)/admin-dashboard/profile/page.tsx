@@ -46,10 +46,29 @@ function getInitials(name: string) {
 }
 
 export default function AdminProfilePage() {
-  const [user, setUser] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserData | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const cached = sessionStorage.getItem("admin_profile_cache");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !sessionStorage.getItem("admin_profile_cache");
+  });
   const [editing, setEditing] = useState(false);
-  const [nameInput, setNameInput] = useState("");
+  const [nameInput, setNameInput] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const cached = sessionStorage.getItem("admin_profile_cache");
+      return cached ? JSON.parse(cached)?.name || "" : "";
+    } catch {
+      return "";
+    }
+  });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [pwModal, setPwModal] = useState(false);
@@ -61,6 +80,9 @@ export default function AdminProfilePage() {
       if (data) {
         setUser(data);
         setNameInput(data.name || "");
+        try {
+          sessionStorage.setItem("admin_profile_cache", JSON.stringify(data));
+        } catch {}
       }
       setLoading(false);
     });
@@ -77,7 +99,11 @@ export default function AdminProfilePage() {
     const result = await updateProfileAction({ name: nameInput.trim() });
     setSaving(false);
     if (result?.success) {
-      setUser((prev) => ({ ...prev, name: nameInput.trim() }));
+      const updated = { ...user, name: nameInput.trim() };
+      setUser(updated);
+      try {
+        sessionStorage.setItem("admin_profile_cache", JSON.stringify(updated));
+      } catch {}
       setEditing(false);
       showToast("success", "Profile updated successfully!");
     } else {
@@ -112,8 +138,32 @@ export default function AdminProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" style={{ color: CORAL }} />
+      <div className="w-full space-y-6 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="space-y-2">
+          <div className="h-7 w-44 rounded-lg bg-[#E7E2D8]/70" />
+          <div className="h-4 w-72 rounded-lg bg-[#E7E2D8]/50" />
+        </div>
+
+        {/* Banner Skeleton */}
+        <div className="h-48 w-full rounded-3xl bg-[#14171C]/10 border border-[#E7E2D8] p-6 flex items-center gap-5">
+          <div className="h-20 w-20 rounded-full bg-[#E7E2D8]/80 shrink-0" />
+          <div className="space-y-3 w-full max-w-sm">
+            <div className="h-6 w-48 rounded-lg bg-[#E7E2D8]/80" />
+            <div className="h-4 w-60 rounded bg-[#E7E2D8]/50" />
+            <div className="h-5 w-28 rounded-full bg-[#E7E2D8]/60" />
+          </div>
+        </div>
+
+        {/* Info Card Skeleton */}
+        <div className="rounded-3xl border border-[#E7E2D8] bg-white p-6 space-y-4">
+          <div className="h-5 w-36 rounded bg-[#E7E2D8]/70" />
+          <div className="space-y-3 pt-2">
+            <div className="h-10 w-full rounded-xl bg-[#F1EEE6]/60" />
+            <div className="h-10 w-full rounded-xl bg-[#F1EEE6]/60" />
+            <div className="h-10 w-full rounded-xl bg-[#F1EEE6]/60" />
+          </div>
+        </div>
       </div>
     );
   }

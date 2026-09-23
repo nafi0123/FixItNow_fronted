@@ -30,8 +30,19 @@ interface PaymentsViewProps {
 }
 
 export default function PaymentsView({ userRole = "CUSTOMER" }: PaymentsViewProps) {
-  const [payments, setPayments] = useState<PaymentItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [payments, setPayments] = useState<PaymentItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cached = sessionStorage.getItem(`payments_cache_${userRole}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !sessionStorage.getItem(`payments_cache_${userRole}`);
+  });
   const [selectedPayment, setSelectedPayment] = useState<PaymentItem | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
@@ -41,21 +52,26 @@ export default function PaymentsView({ userRole = "CUSTOMER" }: PaymentsViewProp
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
-  const fetchPayments = async () => {
-    setLoading(true);
+  const fetchPayments = async (silent = false) => {
+    if (!silent) setLoading(true);
     const res = await getAllPaymentsAction();
     if (res && res.success && Array.isArray(res.data)) {
       setPayments(res.data);
+      try {
+        sessionStorage.setItem(`payments_cache_${userRole}`, JSON.stringify(res.data));
+      } catch {}
     } else {
-      setPayments([]);
-      toast.error(res?.message || "Failed to load payment history.");
+      if (!silent) {
+        setPayments([]);
+        toast.error(res?.message || "Failed to load payment history.");
+      }
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchPayments();
-  }, []);
+    fetchPayments(payments.length > 0);
+  }, [userRole]);
 
   const handleViewDetails = async (transactionId: string) => {
     setLoadingDetails(true);

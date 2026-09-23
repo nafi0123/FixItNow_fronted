@@ -38,10 +38,35 @@ interface MetaData {
 const CORAL = "#FF5A36";
 const CORAL_DARK = "#C23B1F";
 
+const CACHE_KEY = "technician_requests_cache";
+
 export default function TechnicianRequestsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [meta, setMeta] = useState<MetaData>({ page: 1, limit: 10, total: 0, totalPage: 1 });
-  const [loading, setLoading] = useState(true);
+  const [bookings, setBookings] = useState<Booking[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      return cached ? JSON.parse(cached).bookings || [] : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [meta, setMeta] = useState<MetaData>(() => {
+    if (typeof window === "undefined") return { page: 1, limit: 10, total: 0, totalPage: 1 };
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      return cached && JSON.parse(cached).meta ? JSON.parse(cached).meta : { page: 1, limit: 10, total: 0, totalPage: 1 };
+    } catch {
+      return { page: 1, limit: 10, total: 0, totalPage: 1 };
+    }
+  });
+
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !sessionStorage.getItem(CACHE_KEY);
+  });
+
+  const [isSyncing, setIsSyncing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
@@ -59,26 +84,72 @@ export default function TechnicianRequestsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const fetchBookings = async () => {
-    setLoading(true);
-    const res = await getTechnicianBookingsAction({
-      page,
-      limit,
-      search: debouncedSearch,
-    });
-
-    if (res && res.success) {
-      setBookings(res.data || []);
-      if (res.meta) setMeta(res.meta);
+  const fetchBookings = async (isBackground = false) => {
+    if (!isBackground) {
+      if (bookings.length === 0) {
+        setLoading(true);
+      } else {
+        setIsSyncing(true);
+      }
     } else {
-      setBookings([]);
-      toast.error(res?.message || "Failed to load job requests");
+      setIsSyncing(true);
     }
-    setLoading(false);
+
+    try {
+      const res = await getTechnicianBookingsAction({
+        page,
+        limit,
+        search: debouncedSearch,
+      });
+
+      if (res && res.success) {
+        const nextBookings = res.data || [];
+        const nextMeta = res.meta || { page, limit, total: nextBookings.length, totalPage: 1 };
+        setBookings(nextBookings);
+        if (res.meta) setMeta(nextMeta);
+
+        // Cache default page 1 unscoped query
+        if (!debouncedSearch && page === 1 && typeof window !== "undefined") {
+          sessionStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({
+              bookings: nextBookings,
+              meta: nextMeta,
+            })
+          );
+        }
+      } else {
+        setBookings([]);
+        toast.error(res?.message || "Failed to load job requests");
+      }
+    } catch (err) {
+      console.error("fetchBookings error:", err);
+    } finally {
+      setLoading(false);
+      setIsSyncing(false);
+    }
   };
 
   useEffect(() => {
-    fetchBookings();
+    fetchBookings(true);
+
+    const onFocus = () => fetchBookings(true);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") fetchBookings(true);
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchBookings(true);
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearInterval(interval);
+    };
   }, [page, limit, debouncedSearch]);
 
   const handleStatusUpdate = async (bookingId: string, status: "ACCEPTED" | "DECLINED" | "COMPLETED") => {
@@ -86,7 +157,7 @@ export default function TechnicianRequestsPage() {
     const res = await updateTechnicianBookingStatusAction(bookingId, status);
     if (res && res.success) {
       toast.success(res.message || `Booking status updated to ${status}!`);
-      await fetchBookings();
+      await fetchBookings(false);
     } else {
       toast.error(res.message || "Failed to update booking status.");
     }

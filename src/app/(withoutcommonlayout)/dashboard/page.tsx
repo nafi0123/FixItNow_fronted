@@ -52,38 +52,119 @@ const CORAL = "#FF5A36";
 const CORAL_DARK = "#C23B1F";
 const TEAL = "#0FA894";
 
+const CACHE_KEY = "customer_overview_cache";
+
 export default function CustomerDashboardPage() {
-  const [user, setUser] = useState<any>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [totalBookingsCount, setTotalBookingsCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      return cached ? JSON.parse(cached).user : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [bookings, setBookings] = useState<Booking[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      return cached ? JSON.parse(cached).bookings || [] : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [totalBookingsCount, setTotalBookingsCount] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      return cached ? JSON.parse(cached).totalBookingsCount || 0 : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !sessionStorage.getItem(CACHE_KEY);
+  });
+
+  const [isSyncing, setIsSyncing] = useState(false);
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
 
-  const loadCustomerDashboard = async () => {
-    setLoading(true);
+  const loadCustomerDashboard = async (isBackground = false) => {
+    if (!isBackground) {
+      // Only show skeleton if no data is present
+      if (bookings.length === 0 && !user) {
+        setLoading(true);
+      } else {
+        setIsSyncing(true);
+      }
+    } else {
+      setIsSyncing(true);
+    }
+
     try {
       const [meRes, bookingsRes] = await Promise.all([
         getMeAction(),
         getUserBookingsAction({ limit: 50, page: 1 }),
       ]);
 
+      let nextUser = user;
+      let nextBookings = bookings;
+      let nextTotal = totalBookingsCount;
+
       if (meRes) {
+        nextUser = meRes;
         setUser(meRes);
       }
 
       if (bookingsRes && bookingsRes.success && Array.isArray(bookingsRes.data)) {
-        setBookings(bookingsRes.data);
-        setTotalBookingsCount(bookingsRes.meta?.total || bookingsRes.data.length);
+        nextBookings = bookingsRes.data;
+        nextTotal = bookingsRes.meta?.total || bookingsRes.data.length;
+        setBookings(nextBookings);
+        setTotalBookingsCount(nextTotal);
+      }
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(
+          CACHE_KEY,
+          JSON.stringify({
+            user: nextUser,
+            bookings: nextBookings,
+            totalBookingsCount: nextTotal,
+          })
+        );
       }
     } catch (error) {
       console.error("loadCustomerDashboard error:", error);
     } finally {
       setLoading(false);
+      setIsSyncing(false);
     }
   };
 
   useEffect(() => {
-    loadCustomerDashboard();
+    loadCustomerDashboard(true);
+
+    const onFocus = () => loadCustomerDashboard(true);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") loadCustomerDashboard(true);
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadCustomerDashboard(true);
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearInterval(interval);
+    };
   }, []);
 
   const handlePayNow = async (bookingId: string) => {
@@ -151,12 +232,12 @@ export default function CustomerDashboardPage() {
 
           <div className="flex flex-wrap gap-3 sm:shrink-0">
             <button
-              onClick={loadCustomerDashboard}
-              disabled={loading}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-bold text-white transition-all hover:bg-white/20 active:scale-95"
+              onClick={() => loadCustomerDashboard(false)}
+              disabled={loading || isSyncing}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-bold text-white transition-all hover:bg-white/20 active:scale-95 disabled:opacity-60"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
+              <RefreshCw className={`h-3.5 w-3.5 ${loading || isSyncing ? "animate-spin" : ""}`} />
+              {isSyncing ? "Syncing..." : "Refresh"}
             </button>
             <Link
               href="/technicians"
