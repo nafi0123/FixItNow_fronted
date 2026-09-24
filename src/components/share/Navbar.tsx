@@ -93,37 +93,6 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Signature: coral → teal gradient hairline */}
-      <div
-        className="h-1 w-full"
-        style={{ background: `linear-gradient(90deg, ${CORAL} 0%, ${TEAL} 100%)` }}
-      />
-
-      {/* Utility strip */}
-      <div className="hidden sm:block" style={{ backgroundColor: INK }}>
-        <div className="mx-auto flex h-9 max-w-7xl items-center justify-between px-4 text-xs text-neutral-300 sm:px-6 lg:px-8">
-          <span className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span
-                className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-                style={{ backgroundColor: TEAL }}
-              />
-              <span
-                className="relative inline-flex h-2 w-2 rounded-full"
-                style={{ backgroundColor: TEAL }}
-              />
-            </span>
-            142 technicians online now
-          </span>
-          <span className="hidden md:block">
-            Book before 6pm for{" "}
-            <span style={{ color: CORAL }} className="font-semibold">
-              same-day service
-            </span>
-          </span>
-        </div>
-      </div>
-
       <div className="border-b border-neutral-200" style={{ backgroundColor: CREAM }}>
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           {/* Logo */}
